@@ -1,0 +1,23 @@
+﻿{
+  "name": "com.mastersix.mastersm",
+  "displayName": "Master State Machine",
+  "version": "0.0.1",
+  "unity": "2021.2",
+  "description": "Master State Machine is an implementation of a paradigm based on (capabilities/states), which allows modular and scalable state machines, and a good interoperability with Unity components.",
+  "keywords": [
+    "state machine",
+    "state",
+    "capability",
+    "component"
+  ],
+  "author": {
+    "name": "MasterSix",
+    "email": "igork7silva@gmail.com",
+    "url": "https://github.com/MasterSix997"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MasterSix997/MasterSM.git",
+    "revision": ""
+  }
+}
