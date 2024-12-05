@@ -28,9 +28,10 @@ namespace AdvancedSM.Editor
             });
             
             property.Next(true);
+            var minDepth = property.depth;
             do
             {
-                if (property.depth == 0)
+                if (property.depth < minDepth)
                     break;
                 
                 var field = new PropertyField(property);

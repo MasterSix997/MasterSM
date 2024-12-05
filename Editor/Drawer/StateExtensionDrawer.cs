@@ -53,9 +53,10 @@ namespace AdvancedSM.Editor
             root.Add(foldout);
             
             property.Next(true);
+            var minDepth = property.depth;
             while (property.NextVisible(false))
             {
-                if (property.depth == 0)
+                if (property.depth < minDepth)
                     break;
                 
                 foldout.Add(new PropertyField(property));
