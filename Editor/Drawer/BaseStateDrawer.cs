@@ -26,8 +26,13 @@ namespace AdvancedSM.Editor
                     unityFontStyleAndWeight = FontStyle.Bold
                 }
             });
+
+            if (!property.Next(true))
+            {
+                root.Add(new Label("Empty state..."));
+                return root;
+            }
             
-            property.Next(true);
             var minDepth = property.depth;
             do
             {
@@ -43,6 +48,11 @@ namespace AdvancedSM.Editor
                     root.Add(field);
             } while (property.NextVisible(false));
 
+            if (root.childCount == 0)
+            {
+                root.Add(new Label("Empty state..."));
+            }
+            
             if (extensionsContainer.childCount > 1)
                 root.Add(extensionsContainer);
             
