@@ -27,13 +27,14 @@ namespace AdvancedSM.Editor
                 }
             });
 
+            var minDepth = property.depth + 1;
+            
             if (!property.Next(true))
             {
                 root.Add(new Label("Empty state..."));
                 return root;
             }
             
-            var minDepth = property.depth;
             do
             {
                 if (property.depth < minDepth)

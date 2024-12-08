@@ -52,13 +52,14 @@ namespace AdvancedSM.Editor
             
             root.Add(foldout);
             
+            var minDepth = property.depth + 1;
+            
             if (!property.Next(true))
             {
                 foldout.Add(new Label("Empty extension..."));
                 return root;
             }
             
-            var minDepth = property.depth;
             while (property.NextVisible(false))
             {
                 if (property.depth < minDepth)
