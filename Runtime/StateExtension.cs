@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace AdvancedSM
+namespace MasterSM
 {
     [Serializable]
     public abstract class StateExtension<TStateId, TStateMachine> 
