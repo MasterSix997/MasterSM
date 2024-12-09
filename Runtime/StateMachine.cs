@@ -12,27 +12,32 @@ namespace MasterSM
         
     }
 
-    public class LayerMachine<TStateId, TStateMachine> : IStateMachine
-        where TStateMachine : BehaviourMachine<TStateId, TStateMachine>
+    public class BaseMachine<TStateId, TStateMachine> : IStateMachine
+        where TStateMachine : IStateMachine
     {
-        public TStateMachine Machine { get; private set; }
-        public int LayerIndex { get; private set; }
+        public TStateMachine Machine { get; set; }
+        public int LayerIndex { get; set; }
         
         [CanBeNull] public IState<TStateId, TStateMachine> CurrentState { get; private set; }
         [CanBeNull] public IState<TStateId, TStateMachine> PreviousState { get; private set; }
 
-        protected Dictionary<TStateId, IState<TStateId, TStateMachine>> States = new();
-        protected List<TStateId> StatesOrder = new();
-        protected int CurrentIndex;
+        public Dictionary<TStateId, IState<TStateId, TStateMachine>> States = new();
+        public List<TStateId> StatesOrder = new();
+        public int CurrentIndex = -1;
+        public int PreviousIndex = -1;
 
-        public LayerMachine(TStateMachine machine, int layerIndex)
+        public void AddState(TStateId id, IState<TStateId, TStateMachine> state, int priority = 0)
         {
-            Machine = machine;
-            LayerIndex = layerIndex;
-        }
-
-        public void AddState(IState<TStateId, TStateMachine> state)
-        {
+            state.Id = id;
+            state.Priority = priority;
+            state.Machine = Machine;
+            state.Extensions ??= GetExtensionsInState(state);
+            if (state.Extensions != null)
+            {
+                foreach (var extension in state.Extensions)
+                    extension.Machine = Machine;
+            }
+            
             if (!States.TryAdd(state.Id, state))
                 return;
             
@@ -74,8 +79,7 @@ namespace MasterSM
             {
                 if (TryGetTransition(out var newState, StatesOrder.Count))
                 {
-                    ChangeState(newState.Item1);
-                    CurrentIndex = newState.Item2;
+                    ChangeState(newState.id, newState.index);
                 }
                 else
                 {
@@ -88,17 +92,33 @@ namespace MasterSM
                 PreviousState = null;
             }
         }
-        
+
         public void ChangeState(TStateId newState)
         {
             if (newState == null)
             {
+                ChangeState(default, -1);
+                return;
+            }
+            
+            var index = StatesOrder.IndexOf(newState);
+            ChangeState(newState, index);
+        }
+        
+        private void ChangeState(TStateId newState, int index)
+        {
+            if (newState == null || index < 0 || index >= StatesOrder.Count)
+            {
                 PreviousState = CurrentState;
+                PreviousIndex = CurrentIndex;
                 CurrentState = null;
+                CurrentIndex = -1;
                 ExitPreviousState();
                 return;
             }
             
+            PreviousIndex = CurrentIndex;
+            CurrentIndex = index;
             SetNewState(newState);
             ExitPreviousState();
             EnterNewState();
@@ -119,11 +139,7 @@ namespace MasterSM
                 return;
             
             CurrentState.IsActive = true;
-            CurrentState.OnEnter();
-
-            if (CurrentState.Extensions == null) return;
-            foreach (var extension in CurrentState.Extensions.Where(extension => extension.enabled)) 
-                extension.OnEnter();
+            ExecuteEventOnState(StateEvent.OnEnter, true);
         }
         
         private void ExitPreviousState()
@@ -143,11 +159,11 @@ namespace MasterSM
         {
             if (PreviousState != null)
             {          
-                ChangeState(PreviousState.Id);
+                ChangeState(PreviousState.Id, PreviousIndex);
             }
         }
         
-        public bool TryGetTransition(out (TStateId, int) state, int maxIndex)
+        public bool TryGetTransition(out (TStateId id, int index) state, int maxIndex)
         {
             state = default;
             
@@ -162,6 +178,28 @@ namespace MasterSM
             }
 
             return false;
+        }
+        
+        private void TestTransitions()
+        {
+            if (CurrentState == null)
+            {
+                if (TryGetTransition(out var state, States.Count))
+                {
+                    ChangeState(state.id, state.index);
+                }
+            }
+            else
+            {
+                if (CurrentState.CanExit())
+                {
+                    var maxIndex = CurrentState.CanEnter() ? CurrentIndex : StatesOrder.Count;
+                    if (TryGetTransition(out var state, maxIndex))
+                    {
+                        ChangeState(state.id, state.index);
+                    }
+                }
+            }
         }
 
         public void OnCreated()
@@ -188,158 +226,84 @@ namespace MasterSM
 
         public void OnUpdate()
         {
-            if (CurrentState == null)
-            {
-                if (TryGetTransition(out var state, States.Count))
-                {
-                    CurrentIndex = state.Item2;
-                    ChangeState(state.Item1);
-                }
-            }
-            else
-            {
-                if (CurrentState.CanExit())
-                {
-                    var maxIndex = CurrentState.CanEnter() ? CurrentIndex : StatesOrder.Count;
-                    if (TryGetTransition(out var state, maxIndex))
-                    {
-                        CurrentIndex = state.Item2;
-                        ChangeState(state.Item1);
-                    }
-                }
-            }
-            
-            if (CurrentState == null)
-                return;
-
-            var current = CurrentState;
-            
-            CurrentState.OnUpdate();
-
-            if (current != CurrentState)
-                return;
-
-            if (CurrentState.Extensions == null) return;
-            foreach (var extension in CurrentState.Extensions.Where(extension => extension.enabled))
-                extension.OnUpdate();
+            TestTransitions();
+            ExecuteEventOnState(StateEvent.OnUpdate, true);
         }
-        
+
         public void OnFixedUpdate()
         {
-            if (CurrentState == null)
-                return;
-            
-            var current = CurrentState;
-            
-            CurrentState.OnFixedUpdate();
-
-            if (current != CurrentState)
-                return;
-
-            if (CurrentState.Extensions == null) return;
-            foreach (var extension in CurrentState.Extensions.Where(extension => extension.enabled))
-                extension.OnFixedUpdate();
-        }
-    }
-
-    public abstract class BehaviourMachine<TStateId, TStateMachine> : MonoBehaviour, IStateMachine
-        where TStateMachine : BehaviourMachine<TStateId, TStateMachine>
-    {
-        public IState<TStateId, TStateMachine> CurrentState { get; private set; }
-        public IState<TStateId, TStateMachine> PreviousState { get; private set; }
-        
-        public List<LayerMachine<TStateId, TStateMachine>> Layers { get; private set; } = new();
-        
-        [NonSerialized] protected Dictionary<TStateId, IState<TStateId, TStateMachine>> States = new();
-        [NonSerialized] protected List<TStateId> StatesOrder = new();
-        [NonSerialized] protected int CurrentIndex;
-        
-        // Capabilities
-        // base capabilites has <IStateMachine>
-        [NonReorderable] protected readonly Dictionary<Type, BaseCapability<TStateId, TStateMachine>> Capabilities = new();
-        
-        public void RegisterCapability<T>(T capability) where T : BaseCapability<TStateId, TStateMachine>
-        {
-            Capabilities.Add(typeof(T), capability);
+            ExecuteEventOnState(StateEvent.OnFixedUpdate, true);
         }
         
-        public T GetCapability<T>() where T : BaseCapability<TStateId, TStateMachine>
+        private enum StateEvent
         {
-            if (Capabilities.TryGetValue(typeof(T), out var capability))
-            {
-                return (T)capability;
-            }
-
-            return default;
+            OnCreated,
+            OnEnter,
+            OnExit,
+            OnUpdate,
+            OnFixedUpdate
         }
-        
-        public void AddState(TStateId id, IState<TStateId, TStateMachine> state, int priority = 0)
+
+        private void ExecuteEventOnState(StateEvent stateEvent, bool isCurrentState, IState<TStateId, TStateMachine> state = null)
         {
-            state.Id = id;
-            state.Priority = priority;
-            state.Machine = (TStateMachine)this;
-            state.Extensions ??= GetExtensionsInState(state);
-            if (state.Extensions != null)
-            {
-                foreach (var extension in state.Extensions)
-                    extension.Machine = (TStateMachine)this;
-            }
-            if (!States.TryAdd(id, state))
+            if (isCurrentState)
+                state = CurrentState;
+            
+            if (state == null)
                 return;
             
-            // Add state to order list
-            var index = 0;
-            for (var i = 0; i < StatesOrder.Count; i++)
+            switch (stateEvent)
             {
-                if (priority > States[StatesOrder[i]].Priority)
-                {
-                    index = i;
+                case StateEvent.OnCreated:
+                    state.OnCreated();
                     break;
-                }
-                index = i + 1;
+                case StateEvent.OnEnter:
+                    state.OnEnter();
+                    break;
+                case StateEvent.OnExit:
+                    state.OnExit();
+                    break;
+                case StateEvent.OnUpdate:
+                    state.OnUpdate();
+                    break;
+                case StateEvent.OnFixedUpdate:
+                    state.OnFixedUpdate();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(stateEvent), stateEvent, null);
             }
-            StatesOrder.Insert(index, id);
 
-            if (index <= CurrentIndex)
-            {
-                CurrentIndex++;
-            }
-        }
+            if (state.Extensions == null) 
+                return;
 
-        public void RemoveState(TStateId id)
-        {
-            if (!States.TryGetValue(id, out var stateToRemove))
+            if (isCurrentState && state != CurrentState)
                 return;
             
-            if (stateToRemove == CurrentState && CurrentState != null)
+            foreach (var extension in state.Extensions.Where(extension => extension.enabled))
             {
-                CurrentState.OnExit();
-                CurrentState.IsActive = false;
-                CurrentState = null;
-            }
-
-            States.Remove(id);
-            StatesOrder.Remove(id);
-            
-            if (stateToRemove == CurrentState)
-            {
-                if (TryGetTransition(out var newState, StatesOrder.Count))
+                switch (stateEvent)
                 {
-                    ChangeState(newState.Item1);
-                    CurrentIndex = newState.Item2;
+                    case StateEvent.OnCreated:
+                        extension.OnCreated(state);
+                        break;
+                    case StateEvent.OnEnter:
+                        extension.OnEnter();
+                        break;
+                    case StateEvent.OnExit:
+                        extension.OnExit();
+                        break;
+                    case StateEvent.OnUpdate:
+                        extension.OnUpdate();
+                        break;
+                    case StateEvent.OnFixedUpdate:
+                        extension.OnFixedUpdate();
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(stateEvent), stateEvent, null);
                 }
-                else
-                {
-                    CurrentState = null;
-                }
-            }
-
-            if (stateToRemove == PreviousState)
-            {
-                PreviousState = null;
             }
         }
-
+        
         [CanBeNull]
         private List<StateExtension<TStateId, TStateMachine>> GetExtensionsInState(IState<TStateId, TStateMachine> state)
         {
@@ -359,23 +323,71 @@ namespace MasterSM
             }
             return extensions.Count == 0 ? null : extensions;
         }
+    }
 
-        public LayerMachine<TStateId, TStateMachine> AddLayer()
+    public abstract class BehaviourMachine<TStateId, TStateMachine> : MonoBehaviour, IStateMachine
+        where TStateMachine : BehaviourMachine<TStateId, TStateMachine>
+    {
+        private bool _initialized;
+        private readonly BaseMachine<TStateId, TStateMachine> _baseMachine = new();
+        public IState<TStateId, TStateMachine> CurrentState => _baseMachine.CurrentState;
+        public IState<TStateId, TStateMachine> PreviousState => _baseMachine.PreviousState;
+        
+        public List<BaseMachine<TStateId, TStateMachine>> Layers { get; } = new();
+        
+        protected Dictionary<TStateId, IState<TStateId, TStateMachine>> States => _baseMachine.States;
+        protected List<TStateId> StatesOrder => _baseMachine.StatesOrder;
+        protected int CurrentIndex => _baseMachine.CurrentIndex;
+        
+        // Capabilities
+        protected readonly Dictionary<Type, BaseCapability<TStateId, TStateMachine>> Capabilities = new();
+        
+        public void Initialize()
         {
+            if (_initialized)
+                return;
+            
+            _baseMachine.Machine = (TStateMachine)this;
+            _initialized = true;
+        }
+        
+        public void RegisterCapability<T>(T capability) where T : BaseCapability<TStateId, TStateMachine>
+        {
+            Capabilities.Add(typeof(T), capability);
+        }
+        
+        public T GetCapability<T>() where T : BaseCapability<TStateId, TStateMachine>
+        {
+            if (Capabilities.TryGetValue(typeof(T), out var capability))
+            {
+                return (T)capability;
+            }
+
+            return default;
+        }
+        
+        public void AddState(TStateId id, IState<TStateId, TStateMachine> state, int priority = 0)
+        {
+            Initialize();
+            _baseMachine.AddState(id, state, priority);
+        }
+
+        public void RemoveState(TStateId id)
+        {
+            _baseMachine.RemoveState(id);
+        }
+
+        public BaseMachine<TStateId, TStateMachine> AddLayer()
+        {
+            Initialize();
             var layerIndex = Layers.Count;
-            Layers.Add(new LayerMachine<TStateId, TStateMachine>((TStateMachine)this, layerIndex));
+            Layers.Add(new BaseMachine<TStateId, TStateMachine> { LayerIndex = layerIndex, Machine = (TStateMachine)this });
             return Layers[layerIndex];
         }
         
         public void RemoveLayer(int layerIndex)
         {
-            if (layerIndex < 0)
-                layerIndex = 0;
-
-            if (layerIndex >= Layers.Count)
-            {
-                throw new IndexOutOfRangeException("Layer index is out of range");
-            }
+            layerIndex = GetCorrectLayerIndex(layerIndex);
 
             var layerState = Layers[layerIndex].CurrentState;
             if (layerState != null)
@@ -383,131 +395,44 @@ namespace MasterSM
             Layers.RemoveAt(layerIndex);
         }
 
-        public LayerMachine<TStateId, TStateMachine> GetLayer(int layerIndex)
+        public BaseMachine<TStateId, TStateMachine> GetLayer(int layerIndex)
         {
-            if (layerIndex < 0)
-                layerIndex = 0;
-
-            if (layerIndex >= Layers.Count)
-            {
-                throw new IndexOutOfRangeException("Layer index is out of range");
-            }
-
+            layerIndex = GetCorrectLayerIndex(layerIndex);
             return Layers[layerIndex];
         }
         
-        public void AddStateInLayer(int layerIndex, TStateId id, IState<TStateId, TStateMachine> state, int priority = 0)
+        private int GetCorrectLayerIndex(int layerIndex)
         {
             if (layerIndex < 0)
-                layerIndex = 0;
+                return 0;
 
             if (layerIndex >= Layers.Count)
             {
                 throw new IndexOutOfRangeException("Layer index is out of range");
             }
             
-            AddStateInLayer(Layers[layerIndex], id, state, priority);
+            return layerIndex;
         }
-        
-        public void AddStateInLayer(LayerMachine<TStateId, TStateMachine> layer, TStateId id, IState<TStateId, TStateMachine> state, int priority = 0)
-        {
-            state.Id = id;
-            state.Priority = priority;
-            state.Machine = (TStateMachine)this;
-            state.Extensions ??= GetExtensionsInState(state);
-            if (state.Extensions != null)
-            {
-                foreach (var extension in state.Extensions)
-                    extension.Machine = (TStateMachine)this;
-            }
-            
-            layer.AddState(state);
-        }
-        
-        public void RemoveStateInLayer(int layerIndex, TStateId id)
-        {
-            if (layerIndex < 0)
-                layerIndex = 0;
 
-            if (layerIndex >= Layers.Count)
-            {
-                throw new IndexOutOfRangeException("Layer index is out of range");
-            }
-            
-            Layers[layerIndex].RemoveState(id);
-        }
- 
         public void ChangeState(TStateId newState)
         {
-            SetNewState(newState);
-            ExitPreviousState();
-            EnterNewState();
-        }
-        
-        private void SetNewState(TStateId newState)
-        {
-            if((CurrentState != null && newState.Equals(CurrentState.Id)) || !States.TryGetValue(newState, out var state))
-               return;
-               
-            PreviousState = CurrentState;
-            CurrentState = state;
-        }
-        
-        private void EnterNewState()
-        {
-            if (CurrentState == null)
-                return;
-            
-            CurrentState.IsActive = true;
-            CurrentState.OnEnter();
-
-            if (CurrentState.Extensions == null) return;
-            foreach (var extension in CurrentState.Extensions.Where(extension => extension.enabled)) 
-                extension.OnEnter();
-        }
-        
-        private void ExitPreviousState()
-        {
-            if (PreviousState == null)
-                return;
-            
-            PreviousState.OnExit();
-            PreviousState.IsActive = false;
-
-            if (PreviousState.Extensions == null) return;
-            foreach (var extension in PreviousState.Extensions.Where(extension => extension.enabled))
-                extension.OnExit();
+            _baseMachine.ChangeState(newState);
         }
         
         public void RevertToPreviousState()
         {
-            if (PreviousState != null)
-            {          
-                ChangeState(PreviousState.Id);
-            }
+            _baseMachine.RevertToPreviousState();
         }
         
-        public bool TryGetTransition(out (TStateId, int) state, int maxIndex)
+        protected virtual void Awake()
         {
-            state = default;
-            
-            for (int i = 0; i < maxIndex; i++)
-            {
-                if (States[StatesOrder[i]].CanEnter())
-                {
-                    state = (StatesOrder[i], i);
-                    
-                    return true;
-                }
-            }
-
-            return false;
+            Initialize();
         }
 
         protected virtual void Start()
         {
-            OnCreated();
-            EnterNewState();
+            _baseMachine.OnCreated();
+            _baseMachine.EnterNewState();
             
             foreach (var layer in Layers)
             {
@@ -518,7 +443,7 @@ namespace MasterSM
 
         protected virtual void Update()
         {
-            OnUpdate();
+            _baseMachine.OnUpdate();
             
             foreach (var layer in Layers)
             {
@@ -528,89 +453,12 @@ namespace MasterSM
 
         protected virtual void FixedUpdate()
         {
-            OnFixedUpdate();
+            _baseMachine.OnFixedUpdate();
             
             foreach (var layer in Layers)
             {
                 layer.OnFixedUpdate();
             }
-        }
-
-        public void OnCreated()
-        {
-            if (States.Count == 0)
-                return;
-            
-            foreach (var state in States.Values)
-            {
-                state.OnCreated();
-                if (state.Extensions == null) 
-                    continue;
-                
-                foreach (var extension in state.Extensions)
-                    extension.OnCreated(state);
-            }
-
-            if (TryGetTransition(out var newState, States.Count))
-            {
-                CurrentIndex = newState.Item2;
-                CurrentState = States[StatesOrder[CurrentIndex]];
-            }
-        }
-
-        public void OnUpdate()
-        {
-            if (CurrentState == null)
-            {
-                if (TryGetTransition(out var state, States.Count))
-                {
-                    CurrentIndex = state.Item2;
-                    ChangeState(state.Item1);
-                }
-            }
-            else
-            {
-                if (CurrentState.CanExit())
-                {
-                    var maxIndex = CurrentState.CanEnter() ? CurrentIndex : StatesOrder.Count;
-                    if (TryGetTransition(out var state, maxIndex))
-                    {
-                        CurrentIndex = state.Item2;
-                        ChangeState(state.Item1);
-                    }
-                }
-            }
-            
-            if (CurrentState == null)
-                return;
-            
-            var current = CurrentState;
-            
-            CurrentState.OnUpdate();
-
-            if (current != CurrentState)
-                return;
-
-            if (CurrentState.Extensions == null) return;
-            foreach (var extension in CurrentState.Extensions.Where(extension => extension.enabled))
-                extension.OnUpdate();
-        }
-        
-        public void OnFixedUpdate()
-        {
-            if (CurrentState == null)
-                return;
-            
-            var current = CurrentState;
-            
-            CurrentState.OnFixedUpdate();
-
-            if (current != CurrentState)
-                return;
-
-            if (CurrentState.Extensions == null) return;
-            foreach (var extension in CurrentState.Extensions.Where(extension => extension.enabled))
-                extension.OnFixedUpdate();
         }
     }
 }
