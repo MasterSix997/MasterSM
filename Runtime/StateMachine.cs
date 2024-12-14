@@ -25,17 +25,29 @@ namespace MasterSM
         public List<TStateId> StatesOrder = new();
         public int CurrentIndex = -1;
         public int PreviousIndex = -1;
+        public bool Created;
 
         public void AddState(TStateId id, IState<TStateId, TStateMachine> state, int priority = 0)
         {
-            state.Id = id;
-            state.Priority = priority;
-            state.Machine = Machine;
-            state.Extensions ??= GetExtensionsInState(state);
-            if (state.Extensions != null)
+            if (!state.Initialized)
             {
-                foreach (var extension in state.Extensions)
-                    extension.Machine = Machine;
+                state.Initialize(id, Machine, priority);
+                state.Extensions ??= GetExtensionsInState(state);
+                if (state.Extensions != null)
+                {
+                    foreach (var extension in state.Extensions)
+                        extension.Machine = Machine;
+                }
+
+                if (Created)
+                {
+                    state.OnCreated();
+                    if (state.Extensions != null)
+                    {
+                        foreach (var extension in state.Extensions)
+                            extension.OnCreated(state);
+                    }
+                }
             }
             
             if (!States.TryAdd(state.Id, state))
@@ -116,21 +128,26 @@ namespace MasterSM
                 ExitPreviousState();
                 return;
             }
-            
-            PreviousIndex = CurrentIndex;
-            CurrentIndex = index;
-            SetNewState(newState);
+
+            if (!SetNewState(newState, index)) return;
             ExitPreviousState();
             EnterNewState();
         }
         
-        private void SetNewState(TStateId newState)
+        private bool SetNewState(TStateId newState, int index)
         {
             if((CurrentState != null && newState.Equals(CurrentState.Id)) || !States.TryGetValue(newState, out var state))
-               return;
-               
+               return false;
+
+            if (!state.Enabled)
+                return false;
+            
+            PreviousIndex = CurrentIndex;
+            CurrentIndex = index;
+            
             PreviousState = CurrentState;
             CurrentState = state;
+            return true;
         }
         
         public void EnterNewState()
@@ -167,9 +184,9 @@ namespace MasterSM
         {
             state = default;
             
-            for (int i = 0; i < maxIndex; i++)
+            for (var i = 0; i < maxIndex; i++)
             {
-                if (States[StatesOrder[i]].CanEnter())
+                if (States[StatesOrder[i]].Enabled && States[StatesOrder[i]].CanEnter())
                 {
                     state = (StatesOrder[i], i);
                     

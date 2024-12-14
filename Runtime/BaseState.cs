@@ -7,11 +7,15 @@ namespace MasterSM
     public interface IState<TStateId, TStateMachine>
         where TStateMachine : IStateMachine
     {
-        public TStateId Id { get; set; }
-        public TStateMachine Machine { get; set; }
-        public int Priority { get; set; }
+        public TStateId Id { get; }
+        public TStateMachine Machine { get; }
+        public int Priority { get; }
         public bool IsActive { get; set; }
+        public bool Initialized { get; }
+        public bool Enabled { get; set; }
         [CanBeNull] public List<StateExtension<TStateId, TStateMachine>> Extensions { get; set; }
+        
+        public void Initialize(TStateId id, TStateMachine machine, int priority);
         
         public bool CanEnter();
 
@@ -38,7 +42,23 @@ namespace MasterSM
         public TStateMachine Machine { get; set; }
         public int Priority { get; set; }
         public bool IsActive { get; set; }
+        
+        private bool _initialized;
+
+        bool IState<TStateId, TStateMachine>.Initialized => _initialized;
+
+        public bool Enabled { get; set; }
         public List<StateExtension<TStateId, TStateMachine>> Extensions { get; set; }
+
+        public void Initialize(TStateId id, TStateMachine machine, int priority)
+        {
+            Id = id;
+            Machine = machine;
+            Priority = priority;
+            IsActive = false;
+            Enabled = true;
+            _initialized = true;
+        }
 
         public abstract bool CanEnter();
 
@@ -62,6 +82,9 @@ namespace MasterSM
         public TStateMachine Machine { get; set; }
         public int Priority { get; set; }
         public bool IsActive { get; set; }
+        private bool _initialized;
+        bool IState<TStateId, TStateMachine>.Initialized => _initialized;
+        public bool Enabled { get; set; }
 
         public List<StateExtension<TStateId, TStateMachine>> Extensions { get; set; } = null;
         
@@ -83,7 +106,17 @@ namespace MasterSM
             this.onUpdate = onUpdate;
             this.onFixedUpdate = onFixedUpdate;
         }
-        
+
+        public void Initialize(TStateId id, TStateMachine machine, int priority)
+        {
+            Id = id;
+            Machine = machine;
+            Priority = priority;
+            IsActive = false;
+            Enabled = true;
+            _initialized = true;
+        }
+
         /// <summary>
         /// Don't call this method, it's called by the state machine.
         /// </summary>
@@ -124,12 +157,4 @@ namespace MasterSM
             Name = name;
         }
     }
-
-    // public static class IStateExtensions
-    // {
-    //     public static bool Is<TStateId>(this IState<TStateId, IStateMachine> state)
-    //     {
-    //         return state is TStateId;
-    //     }
-    // }
 }

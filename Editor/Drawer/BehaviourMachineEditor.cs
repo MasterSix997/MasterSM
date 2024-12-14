@@ -1,14 +1,8 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine;
-using UnityEngine.Profiling;
 using UnityEngine.UIElements;
 
 namespace MasterSM.Editor.Drawer
@@ -17,89 +11,15 @@ namespace MasterSM.Editor.Drawer
     [CanEditMultipleObjects]
     public class BehaviourMachineEditor : UnityEditor.Editor
     {
-        private struct BaseStateValues
-        {
-            private readonly Func<int> _currentIndexGetter;
-            private readonly Func<int> _previousIndexGetter;
-            private readonly Func<IList> _statesOrderGetter;
-            
-            public int CachedCurrentIndex { get; private set; }
-            public int CachedPreviousIndex { get; private set; }
-            public string[] CachedStatesText { get; private set; }
-            
-            private readonly float _refreshRate;
-            private float _currentTime;
-
-            public BaseStateValues(object target, float refreshRate = 2)
-            {
-                // Initalize fields
-                // _currentIndexGetter = null;
-                // _statesOrderGetter = null;
-                CachedCurrentIndex = -1;
-                CachedPreviousIndex = -1;
-                CachedStatesText = Array.Empty<string>();
-                _refreshRate = refreshRate;
-                _currentTime = 0;
-
-                var type = target.GetType();
-                
-                var currentIndexField = type.GetField("CurrentIndex", BindingFlags.Public | BindingFlags.Instance)!;
-                var previousIndexField = type.GetField("PreviousIndex", BindingFlags.Public | BindingFlags.Instance)!;
-                var statesOrderField = type.GetField("StatesOrder", BindingFlags.Public | BindingFlags.Instance)!;
-                
-                _currentIndexGetter = CreateFieldGetter<int>(target, currentIndexField);
-                _previousIndexGetter = CreateFieldGetter<int>(target, previousIndexField);
-                _statesOrderGetter = CreateFieldGetter<IList>(target, statesOrderField);
-            }
-            
-            public static Func<T> CreateFieldGetter<T>(object objectTarget, FieldInfo fieldInfo)
-            {
-                var instanceParam = Expression.Constant(objectTarget);
-                var fieldAccess = Expression.Field(instanceParam, fieldInfo);
-                var lambda = Expression.Lambda<Func<T>>(fieldAccess);
-                return lambda.Compile();
-            }
-
-            public static Func<T> CreatePropertyGetter<T>(object objectTarget, PropertyInfo propertyInfo)
-            {
-                var instanceParam = Expression.Constant(objectTarget);
-                var fieldAccess = Expression.Property(instanceParam, propertyInfo);
-                var lambda = Expression.Lambda<Func<T>>(fieldAccess);
-                return lambda.Compile();
-            }
-
-            public void UpdateValues(float deltaTime)
-            {
-                _currentTime += deltaTime;
-
-                CachedCurrentIndex = _currentIndexGetter();
-                CachedPreviousIndex = _previousIndexGetter();
-
-                if (_currentTime < _refreshRate)
-                    return;
-
-                _currentTime -= _refreshRate;
-                
-                var statesOrder = _statesOrderGetter();
-                CachedStatesText = statesOrder.Cast<object>().Select(s => s.ToString().Split('.', StringSplitOptions.RemoveEmptyEntries).Last()).ToArray();
-            }
-        }
-        
         private bool _fieldsInitialized;
-        
         private BaseStateValues _behaviourMachineValues;
-        private Func<IList> _layersGetter;
-        private List<BaseStateValues> _layerValues = new();
 
-        private float _currentTime;
+        private VisualElement _debugContainer;
 
         public override VisualElement CreateInspectorGUI()
         {
             var root = new VisualElement();
 
-            InspectorElement.FillDefaultInspector(root, serializedObject, this);
-            root.RemoveAt(0);
-            
             // Header
             var headerContainer = new VisualElement
             {
@@ -112,7 +32,7 @@ namespace MasterSM.Editor.Drawer
                     alignItems = Align.Center,
                 },
             };
-            root.Insert(0, headerContainer);
+            root.Add(headerContainer);
 
             var titleText = "Behaviour Machine";
             if (serializedObject.targetObjects.Length == 1 || serializedObject.targetObjects.All(t => t.GetType() == target.GetType()))
@@ -131,14 +51,35 @@ namespace MasterSM.Editor.Drawer
             if (Application.isPlaying && targets.Length == 1)
             {
                 InitializeReflectionFields();
-            
-                var debugContainer = new IMGUIContainer(DrawBehaviourMachine);
-                root.Add(debugContainer);
+                _debugContainer = CreateDebugContainer();
+                root.Add(_debugContainer);
             }
 
             return root;
         }
+        
+        private void OnEnable()
+        {
+            if (!Application.isPlaying)
+                return;
+            
+            InitializeReflectionFields();
+            EditorApplication.update += OnEditorUpdate;
+        }
 
+        private void OnDisable()
+        {
+            if (!Application.isPlaying)
+                return;
+            
+            EditorApplication.update -= OnEditorUpdate;
+        }
+        
+        private void OnEditorUpdate()
+        {
+            UpdateDebugContainer(_debugContainer);
+        }
+        
         private async void InitializeReflectionFields()
         {
             if (targets.Length > 1)
@@ -149,9 +90,6 @@ namespace MasterSM.Editor.Drawer
             await Task.Run(() =>
             {
                 var type = target.GetType().BaseType!;
-                
-                var layersProperty = type.GetProperty("Layers", BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetField);
-                _layersGetter = BaseStateValues.CreatePropertyGetter<IList>(target, layersProperty);
                 
                 var baseMachineField = type.GetField("_baseMachine", BindingFlags.NonPublic | BindingFlags.Instance)!;
                 var baseMachineInstance = baseMachineField.GetValue(target)!;
@@ -165,103 +103,134 @@ namespace MasterSM.Editor.Drawer
         private void UpdateValues(float deltaTime)
         {
             _behaviourMachineValues.UpdateValues(deltaTime);
-            
-            foreach (var layerValue in _layerValues)
-                layerValue.UpdateValues(deltaTime);
-            
-            _currentTime += deltaTime;
-
-            const float refreshRate = 5;
-            if (_currentTime < refreshRate)
+        }
+        
+        private void UpdateDebugContainer(VisualElement container)
+        {
+            UpdateValues(Time.deltaTime);
+            if (!_behaviourMachineValues.IsDirty)
                 return;
             
-            _currentTime -= refreshRate;
-
-            // TODO: Fix layer states don't draw
-            var layers = _layersGetter();
-            if (_layerValues.Count != layers.Count)
-            {
-                _layerValues.Clear();
-                foreach (var layer in layers)
-                {
-                    _layerValues.Add(new BaseStateValues(layer, 5));
-                }
-                foreach (var layerValue in _layerValues)
-                    layerValue.UpdateValues(5);
-            }
+            container.Clear();
+            DrawBaseState(container, _behaviourMachineValues);
         }
 
-        private void DrawBehaviourMachine()
+        private VisualElement CreateDebugContainer()
         {
-            if (!_fieldsInitialized)
+            var container = new VisualElement
             {
-                GUILayout.Label("Initializing fields...");
-                return;
-            }
-            Profiler.BeginSample("DrawBehaviourMachine");
-            EditorGUILayout.LabelField("States", EditorStyles.largeLabel);
+                style =
+                {
+                    flexDirection = FlexDirection.Column,
+                    paddingTop = 10,
+                    paddingBottom = 10,
+                    paddingLeft = 10,
+                    paddingRight = 10,
+                }
+            };
 
-            var defaultColor = GUI.color;
-            
             UpdateValues(Time.deltaTime);
 
-            DrawBaseState(_behaviourMachineValues);
-
-            for (var i = 0; i < _layerValues.Count; i++)
+            var statesLabel = new Label("States")
             {
-                GUI.color = defaultColor;
-                
-                var layerValue = _layerValues[i];
-                EditorGUILayout.Separator();
-                EditorGUILayout.LabelField($"Layer '{i}'");
-                DrawBaseState(layerValue);
-            }
+                style = { fontSize = 16, unityFontStyleAndWeight = FontStyle.Bold }
+            };
+            container.Add(statesLabel);
 
-            GUI.color = defaultColor;
-            Profiler.EndSample();
+            DrawBaseState(container, _behaviourMachineValues);
+            return container;
         }
 
-        private void DrawBaseState(BaseStateValues baseState)
+        private void DrawBaseState(VisualElement container, in BaseStateValues stateValues)
         {
-            if (baseState.CachedStatesText.Length > 0)
+            if (stateValues.CachedStatesText.Length > 0)
             {
-                for (var i = 0; i < baseState.CachedStatesText.Length; i++)
+                for (var i = 0; i < stateValues.CachedStatesText.Length; i++)
                 {
-                    if (i < baseState.CachedCurrentIndex)
+                    var color = GetStateColor(i, stateValues);
+                    var drawBottomBorder = i == stateValues.CachedCurrentIndex;
+                    var stateBox = new Label(stateValues.CachedStatesText[i]);
+                    
+                    var horizontalContainer = new VisualElement
                     {
-                        if (i == baseState.CachedPreviousIndex)
-                            GUI.color = new Color(0.5f, 1, 0.5f);
-                        else
-                            GUI.color = Color.yellow;
+                        style =
+                        {
+                            backgroundColor = new Color(0f, 0f, 0f, 0.3f),
+                            alignContent = Align.Center,
+                            flexDirection = FlexDirection.Row,
+                            width = Length.Percent(100),
+                            minHeight = 20,
+                            paddingTop = 5,
+                            paddingBottom = 5,
+                            paddingLeft = 10,
+                            paddingRight = 10,
+                            marginBottom = 2,
+                            borderTopLeftRadius = 0,
+                            borderTopRightRadius = 4,
+                            borderBottomLeftRadius = drawBottomBorder ? 4 : 0,
+                            borderBottomRightRadius = 4,
+                            borderLeftWidth = 1,
+                            borderBottomWidth = drawBottomBorder ? 2 : 0,
+                            borderLeftColor = color,
+                            borderBottomColor = color,
+                        }
+                    };
+                    horizontalContainer.Add(stateBox);
+                    
+                    if (!drawBottomBorder && i == stateValues.CachedPreviousIndex)
+                    {
+                        var previousContainer = new VisualElement
+                        {
+                            style =
+                            {
+                                width = Length.Percent(100),
+                                marginBottom = 2,
+                                marginLeft = -4,
+                                paddingLeft = 2,
+                                borderLeftWidth = 2,
+                                borderLeftColor = Color.cyan,
+                            }
+                        };
+                        horizontalContainer.style.marginBottom = 0;
+                        previousContainer.Add(horizontalContainer);
+                        container.Add(previousContainer);
                     }
-                    else if (i == baseState.CachedCurrentIndex)
-                        GUI.color = Color.green;
                     else
                     {
-                        if (i == baseState.CachedPreviousIndex)
-                            GUI.color = new Color(1, 0.5f, 0.5f);
-                        else
-                            GUI.color = Color.red;
+                        container.Add(horizontalContainer);
                     }
-                    
-                    GUILayout.Box(baseState.CachedStatesText[i], GUILayout.ExpandWidth(true));
-                }
-
-                if (baseState.CachedCurrentIndex == -1)
-                {
-                    GUI.color = Color.blue;
-                    GUILayout.Box("NONE", GUILayout.ExpandWidth(true));
                 }
             }
             else
             {
-                GUILayout.Label("No states available.");
+                var noStateLabel = new Label("No states available.")
+                {
+                    style = { color = Color.gray }
+                };
+                container.Add(noStateLabel);
             }
+            
+            container.Add(new Label(Random.Range(0, 100).ToString()));
         }
-
-        public override bool RequiresConstantRepaint()
+        
+        // private static Color GetStateColor(int stateIndex, int currentIndex, int previousIndex)
+        // {
+        //     if (stateIndex < currentIndex)
+        //         return stateIndex == previousIndex ? new Color(0.5f, 1, 0.5f) : Color.yellow;
+        //     if (stateIndex == currentIndex)
+        //         return Color.green;
+        //     return stateIndex == previousIndex ? new Color(1, 0.5f, 0.5f) : Color.red;
+        // }
+        
+        private static Color GetStateColor(int stateIndex, in BaseStateValues stateValues)
         {
-            return Application.isPlaying;
+            if (stateValues.CachedStatesEnabled[stateIndex] == false)
+                return Color.gray;
+            if (stateIndex < stateValues.CachedCurrentIndex)
+                return Color.yellow;
+            if (stateIndex == stateValues.CachedCurrentIndex)
+                return Color.green;
+            return Color.red;
         }
     }
 }
