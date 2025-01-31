@@ -3,30 +3,34 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using JetBrains.Annotations;
-using UnityEngine;
 
 namespace MasterSM
 {
-    public interface IStateMachine
-    {
-        
-    }
-
-    public class BaseMachine<TStateId, TStateMachine> : IStateMachine
+    /// <summary>
+    /// Base class for a state machine.
+    /// </summary>
+    /// <typeparam name="TStateId">The type of the state identifier.</typeparam>
+    /// <typeparam name="TStateMachine">The type of the state machine.</typeparam>
+    public class BaseMachine<TStateId, TStateMachine> : IStateMachineImpl<TStateId, TStateMachine>
         where TStateMachine : IStateMachine
     {
-        public TStateMachine Machine { get; set; }
-        public int LayerIndex { get; set; }
+        public TStateMachine Machine { get; internal set; }
         
         [CanBeNull] public IState<TStateId, TStateMachine> CurrentState { get; private set; }
         [CanBeNull] public IState<TStateId, TStateMachine> PreviousState { get; private set; }
 
-        public Dictionary<TStateId, IState<TStateId, TStateMachine>> States = new();
-        public List<TStateId> StatesOrder = new();
-        public int CurrentIndex = -1;
-        public int PreviousIndex = -1;
-        public bool Created;
+        public readonly Dictionary<TStateId, IState<TStateId, TStateMachine>> States = new();
+        public readonly List<TStateId> StatesOrder = new();
+        internal int CurrentIndex = -1;
+        internal int PreviousIndex = -1;
+        internal bool Created;
 
+        /// <summary>
+        /// Adds a state to the state machine.
+        /// </summary>
+        /// <param name="id">The state identifier.</param>
+        /// <param name="state">The state to add.</param>
+        /// <param name="priority">The priority of the state.</param>
         public void AddState(TStateId id, IState<TStateId, TStateMachine> state, int priority = 0)
         {
             if (!state.Initialized)
@@ -41,12 +45,13 @@ namespace MasterSM
 
                 if (Created)
                 {
-                    state.OnCreated();
-                    if (state.Extensions != null)
-                    {
-                        foreach (var extension in state.Extensions)
-                            extension.OnCreated(state);
-                    }
+                    ExecuteEventOnState(StateEvent.OnCreated, false, state);
+                    // state.OnCreated();
+                    // if (state.Extensions != null)
+                    // {
+                    //     foreach (var extension in state.Extensions)
+                    //         extension.OnCreated(state);
+                    // }
                 }
             }
             
@@ -62,6 +67,17 @@ namespace MasterSM
                     index = i;
                     break;
                 }
+                // todo: improve priority logic. 
+                // - If two states have the same priority?
+                //    - If a capability adds several states that need to have the states in ascending order?
+                //    - Add one state in front of the other easily
+                //    - Deals with the removal of states correctly
+                
+                // else if (state.Priority == States[StatesOrder[i]].Priority)
+                // {
+                //     throw new ArgumentException("Cannot add state with the same priority as an existing state.");
+                // }
+                
                 index = i + 1;
             }
             StatesOrder.Insert(index, state.Id);
@@ -72,6 +88,19 @@ namespace MasterSM
             }
         }
         
+        public void AddState(StateGroup<TStateId, TStateMachine> group)
+        {
+            var priority = group.basePriority;
+            foreach (var state in group.GetStatesByLowestPriority())
+            {
+                AddState(state.id, state.state, priority++);
+            }
+        }
+        
+        /// <summary>
+        /// Removes a state from the state machine.
+        /// </summary>
+        /// <param name="id">The state identifier.</param>
         public void RemoveState(TStateId id)
         {
             if (!States.TryGetValue(id, out var stateToRemove))
@@ -105,6 +134,64 @@ namespace MasterSM
             }
         }
 
+        /// <summary>
+        /// Gets a state by its identifier.
+        /// </summary>
+        /// <param name="id">The state identifier.</param>
+        /// <returns>The state</returns>
+        /// <exception cref="ArgumentException">Throw exception if state with specified identifier is not found.</exception>
+        public IState<TStateId, TStateMachine> GetState(TStateId id)
+        {
+            if (!States.TryGetValue(id, out var state))
+                throw new ArgumentException($"State with id '{id}' not found.");
+            
+            return state;
+        }
+        
+        /// <summary>
+        /// Checks if a state with the specified identifier exists in the state machine.
+        /// </summary>
+        /// <param name="stateId">The state identifier.</param>
+        /// <returns></returns>
+        public bool HasState(TStateId stateId)
+        {
+            return States.ContainsKey(stateId);
+        }
+        
+        /// <summary>
+        /// Exits the current state and sets the machine to its initial state.
+        /// This method is called when the machine is a submachine of another machine, and the submachine is being exited.
+        /// It is not recommended to call this method directly, as it is usually called by the submachine itself.
+        /// </summary>
+        public void ExitMachine()
+        {
+            if (CurrentState == null)
+                return;
+            
+            CurrentState.OnExit();
+            CurrentState.IsActive = false;
+            CurrentState = null;
+        }
+        
+        /// <summary>
+        /// Enters the current state of the machine.
+        /// This method is called when the machine is a submachine of another machine, and the submachine is being entered.
+        /// It is not recommended to call this method directly, as it is usually called by the submachine itself.
+        /// </summary>
+        public void EnterMachine()
+        {
+            if (CurrentState == null)
+                return;
+            
+            CurrentState.IsActive = true;
+            CurrentState.OnEnter();
+        }
+
+        /// <summary>
+        /// Change the current state to a specified state.
+        /// Making a transition between current to new state.
+        /// </summary>
+        /// <param name="newState">The new state identifier.</param>
         public void ChangeState(TStateId newState)
         {
             if (newState == null)
@@ -137,7 +224,7 @@ namespace MasterSM
         private bool SetNewState(TStateId newState, int index)
         {
             if((CurrentState != null && newState.Equals(CurrentState.Id)) || !States.TryGetValue(newState, out var state))
-               return false;
+                return false;
 
             if (!state.Enabled)
                 return false;
@@ -150,7 +237,7 @@ namespace MasterSM
             return true;
         }
         
-        public void EnterNewState()
+        private void EnterNewState()
         {
             if (CurrentState == null)
                 return;
@@ -172,6 +259,10 @@ namespace MasterSM
                 extension.OnExit();
         }
         
+        /// <summary>
+        /// Changes the current state to the previous state.
+        /// Making a transition between current to previous state.
+        /// </summary>
         public void RevertToPreviousState()
         {
             if (PreviousState != null)
@@ -221,23 +312,26 @@ namespace MasterSM
 
         public void OnCreated()
         {
+            Created = true;
             if (States.Count == 0)
                 return;
             
             foreach (var state in States.Values)
             {
-                state.OnCreated();
-                if (state.Extensions == null) 
-                    continue;
-                
-                foreach (var extension in state.Extensions)
-                    extension.OnCreated(state);
+                ExecuteEventOnState(StateEvent.OnCreated, false, state);
+                // state.OnCreated();
+                // if (state.Extensions == null) 
+                //     continue;
+                //
+                // foreach (var extension in state.Extensions)
+                //     extension.OnCreated(state);
             }
 
             if (TryGetTransition(out var newState, States.Count))
             {
-                CurrentIndex = newState.Item2;
-                CurrentState = States[StatesOrder[CurrentIndex]];
+                ChangeState(newState.id, newState.index);
+                // CurrentIndex = newState.index;
+                // CurrentState = States[StatesOrder[CurrentIndex]];
             }
         }
 
@@ -296,7 +390,7 @@ namespace MasterSM
             if (isCurrentState && state != CurrentState)
                 return;
             
-            foreach (var extension in state.Extensions.Where(extension => extension.enabled))
+            foreach (var extension in state.Extensions.Where(extension => stateEvent == StateEvent.OnCreated || extension.enabled))
             {
                 switch (stateEvent)
                 {
@@ -339,143 +433,6 @@ namespace MasterSM
                 }
             }
             return extensions.Count == 0 ? null : extensions;
-        }
-    }
-
-    public abstract class BehaviourMachine<TStateId, TStateMachine> : MonoBehaviour, IStateMachine
-        where TStateMachine : BehaviourMachine<TStateId, TStateMachine>
-    {
-        private bool _initialized;
-        private readonly BaseMachine<TStateId, TStateMachine> _baseMachine = new();
-        public IState<TStateId, TStateMachine> CurrentState => _baseMachine.CurrentState;
-        public IState<TStateId, TStateMachine> PreviousState => _baseMachine.PreviousState;
-        
-        public List<BaseMachine<TStateId, TStateMachine>> Layers { get; } = new();
-        
-        protected Dictionary<TStateId, IState<TStateId, TStateMachine>> States => _baseMachine.States;
-        protected List<TStateId> StatesOrder => _baseMachine.StatesOrder;
-        protected int CurrentIndex => _baseMachine.CurrentIndex;
-        
-        // Capabilities
-        protected readonly Dictionary<Type, BaseCapability<TStateId, TStateMachine>> Capabilities = new();
-        
-        public void Initialize()
-        {
-            if (_initialized)
-                return;
-            
-            _baseMachine.Machine = (TStateMachine)this;
-            _initialized = true;
-        }
-        
-        public void RegisterCapability<T>(T capability) where T : BaseCapability<TStateId, TStateMachine>
-        {
-            Capabilities.Add(typeof(T), capability);
-        }
-        
-        public T GetCapability<T>() where T : BaseCapability<TStateId, TStateMachine>
-        {
-            if (Capabilities.TryGetValue(typeof(T), out var capability))
-            {
-                return (T)capability;
-            }
-
-            return default;
-        }
-        
-        public void AddState(TStateId id, IState<TStateId, TStateMachine> state, int priority = 0)
-        {
-            Initialize();
-            _baseMachine.AddState(id, state, priority);
-        }
-
-        public void RemoveState(TStateId id)
-        {
-            _baseMachine.RemoveState(id);
-        }
-
-        public BaseMachine<TStateId, TStateMachine> AddLayer()
-        {
-            Initialize();
-            var layerIndex = Layers.Count;
-            Layers.Add(new BaseMachine<TStateId, TStateMachine> { LayerIndex = layerIndex, Machine = (TStateMachine)this });
-            return Layers[layerIndex];
-        }
-        
-        public void RemoveLayer(int layerIndex)
-        {
-            layerIndex = GetCorrectLayerIndex(layerIndex);
-
-            var layerState = Layers[layerIndex].CurrentState;
-            if (layerState != null)
-                Layers[layerIndex].RemoveState(layerState.Id);
-            Layers.RemoveAt(layerIndex);
-        }
-
-        public BaseMachine<TStateId, TStateMachine> GetLayer(int layerIndex)
-        {
-            layerIndex = GetCorrectLayerIndex(layerIndex);
-            return Layers[layerIndex];
-        }
-        
-        private int GetCorrectLayerIndex(int layerIndex)
-        {
-            if (layerIndex < 0)
-                return 0;
-
-            if (layerIndex >= Layers.Count)
-            {
-                throw new IndexOutOfRangeException("Layer index is out of range");
-            }
-            
-            return layerIndex;
-        }
-
-        public void ChangeState(TStateId newState)
-        {
-            _baseMachine.ChangeState(newState);
-        }
-        
-        public void RevertToPreviousState()
-        {
-            _baseMachine.RevertToPreviousState();
-        }
-        
-        protected virtual void Awake()
-        {
-            Initialize();
-        }
-
-        protected virtual void Start()
-        {
-            _baseMachine.OnCreated();
-            _baseMachine.EnterNewState();
-            
-            foreach (var layer in Layers)
-            {
-                layer.OnCreated();
-                layer.EnterNewState();
-            }
-        }
-
-        protected virtual void Update()
-        {
-            _baseMachine.OnUpdate();
-            
-            foreach (var layer in Layers)
-            {
-                layer.OnUpdate();
-            }
-        }
-
-        protected virtual void FixedUpdate()
-        {
-            _baseMachine.OnFixedUpdate();
-            
-            foreach (var layer in Layers)
-            {
-                layer.OnFixedUpdate();
-            }
         }
     }
 }
