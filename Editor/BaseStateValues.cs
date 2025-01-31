@@ -3,9 +3,8 @@ using System.Collections;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using UnityEngine;
 
-namespace MasterSM.Editor.Drawer
+namespace MasterSM.Editor
 {
     public struct BaseStateValues
     {
@@ -23,6 +22,7 @@ namespace MasterSM.Editor.Drawer
         private float _currentTime;
         
         public bool IsDirty { get; private set; }
+        public bool HasStates { get; private set; }
 
         public BaseStateValues(object target, float refreshRate = 2)
         {
@@ -33,13 +33,24 @@ namespace MasterSM.Editor.Drawer
             _refreshRate = refreshRate;
             _currentTime = 0;
             IsDirty = true;
+            HasStates = true;
 
             var type = target.GetType();
                 
-            var currentIndexField = type.GetField("CurrentIndex", BindingFlags.Public | BindingFlags.Instance)!;
-            var previousIndexField = type.GetField("PreviousIndex", BindingFlags.Public | BindingFlags.Instance)!;
-            var statesOrderField = type.GetField("StatesOrder", BindingFlags.Public | BindingFlags.Instance)!;
-            var statesField = type.GetField("States", BindingFlags.Public | BindingFlags.Instance)!;
+            var currentIndexField = type.GetField("CurrentIndex", BindingFlags.Public | BindingFlags.Instance);
+            var previousIndexField = type.GetField("PreviousIndex", BindingFlags.Public | BindingFlags.Instance);
+            var statesOrderField = type.GetField("StatesOrder", BindingFlags.Public | BindingFlags.Instance);
+            var statesField = type.GetField("States", BindingFlags.Public | BindingFlags.Instance);
+
+            if (currentIndexField == null || previousIndexField == null || statesOrderField == null || statesField == null)
+            {
+                HasStates = false;
+                _currentIndexGetter = null;
+                _previousIndexGetter = null;
+                _statesOrderGetter = null;
+                _statesGetter = null;
+                return;
+            }
                 
             _currentIndexGetter = CreateFieldGetter<int>(target, currentIndexField);
             _previousIndexGetter = CreateFieldGetter<int>(target, previousIndexField);
@@ -65,6 +76,9 @@ namespace MasterSM.Editor.Drawer
 
         public void UpdateValues(float deltaTime)
         {
+            if (!HasStates)
+                return;
+            
             _currentTime += deltaTime;
 
             var currentIndex = _currentIndexGetter();

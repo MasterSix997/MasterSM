@@ -1,10 +1,9 @@
-﻿using MasterSM;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace AdvancedSM.Editor
+namespace MasterSM.Editor.Drawer
 {
     [CustomPropertyDrawer(typeof(StateExtension<,>), true)]
     public class StateExtensionDrawer : PropertyDrawer

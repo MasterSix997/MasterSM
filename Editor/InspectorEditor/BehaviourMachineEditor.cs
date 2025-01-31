@@ -2,16 +2,17 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace MasterSM.Editor.Drawer
+namespace MasterSM.Editor.InspectorEditor
 {
     [CustomEditor(typeof(BehaviourMachine<,>), true)]
     [CanEditMultipleObjects]
     public class BehaviourMachineEditor : UnityEditor.Editor
     {
-        private bool _fieldsInitialized;
+        // private bool _fieldsInitialized;
         private BaseStateValues _behaviourMachineValues;
 
         private VisualElement _debugContainer;
@@ -47,6 +48,9 @@ namespace MasterSM.Editor.Drawer
                 },
             };
             headerContainer.Add(title);
+            
+            InspectorElement.FillDefaultInspector(root, serializedObject, this);
+            root.RemoveAt(1);
 
             if (Application.isPlaying && targets.Length == 1)
             {
@@ -97,16 +101,22 @@ namespace MasterSM.Editor.Drawer
                 _behaviourMachineValues = new BaseStateValues(baseMachineInstance, 2);
                 UpdateValues(5);
             });
-            _fieldsInitialized = true;
+            // _fieldsInitialized = true;
         }
 
         private void UpdateValues(float deltaTime)
         {
+            if (!_behaviourMachineValues.HasStates)
+                return;
+            
             _behaviourMachineValues.UpdateValues(deltaTime);
         }
         
         private void UpdateDebugContainer(VisualElement container)
         {
+            if (!_behaviourMachineValues.HasStates)
+                return;
+            
             UpdateValues(Time.deltaTime);
             if (!_behaviourMachineValues.IsDirty)
                 return;
@@ -143,6 +153,9 @@ namespace MasterSM.Editor.Drawer
 
         private void DrawBaseState(VisualElement container, in BaseStateValues stateValues)
         {
+            if (!_behaviourMachineValues.HasStates)
+                return;
+            
             if (stateValues.CachedStatesText.Length > 0)
             {
                 for (var i = 0; i < stateValues.CachedStatesText.Length; i++)
