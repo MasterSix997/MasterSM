@@ -1,0 +1,40 @@
+.base-machine-container {
+    /*border-width: 2px;*/
+    /*border-color: black;*/
+    /*padding: 5px;*/
+}
+
+.state-container {
+    background-color: rgb(35, 35, 35);
+    border-width: 2px;
+    border-color: black;
+    padding: 5px;
+    padding-right: 0px;
+    padding-left: 10px;
+    margin-right: -2px;
+    /*padding-left: 5px;*/
+    /*padding-top: 5px;*/
+}
+
+.state-header {
+    /*border-bottom-width: 1px;*/
+    /*border-bottom-color: black;*/
+}
+
+.current-state {
+    background-color: rgba(76, 175, 80, 0.35);
+    border-color: rgb(76, 175, 80);
+    -unity-font-style: bold;
+}
+
+.previous-state {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-color: rgb(112, 85, 5);
+    -unity-font-style: bold;
+}
+
+.unable-enter-state {
+    /*background-color: rgba(244, 67, 54, 0.35);*/
+    color: gray;
+    border-color: #222222;
+}

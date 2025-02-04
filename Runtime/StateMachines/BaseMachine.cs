@@ -24,6 +24,13 @@ namespace MasterSM
         internal int CurrentIndex = -1;
         internal int PreviousIndex = -1;
         internal bool Created;
+        
+#if UNITY_EDITOR
+        // Events for Custom Editor
+        public event Action OnStateAdded;
+        public event Action OnStateRemoved;
+        public event Action OnCurrentStateChanged;
+#endif
 
         /// <summary>
         /// Adds a state to the state machine.
@@ -52,6 +59,8 @@ namespace MasterSM
             if (!States.TryAdd(state.Id, state))
                 return;
             
+            //Todo: binaary search for index insertion
+            
             // Add state to order list
             var index = 0;
             for (var i = 0; i < StatesOrder.Count; i++)
@@ -77,9 +86,14 @@ namespace MasterSM
             StatesOrder.Insert(index, state.Id);
 
             if (index <= CurrentIndex)
-            {
                 CurrentIndex++;
-            }
+
+            if (index <= PreviousIndex)
+                PreviousIndex++;
+            
+#if UNITY_EDITOR
+            OnStateAdded?.Invoke();
+#endif
         }
         
         public void AddState(StateGroup<TStateId, TStateMachine> group)
@@ -128,6 +142,10 @@ namespace MasterSM
             {
                 PreviousState = null;
             }
+            
+#if UNITY_EDITOR
+            OnStateRemoved?.Invoke();
+#endif
         }
 
         /// <summary>
@@ -210,12 +228,19 @@ namespace MasterSM
                 CurrentState = null;
                 CurrentIndex = -1;
                 ExitPreviousState();
+                
+#if UNITY_EDITOR
+                OnCurrentStateChanged?.Invoke();
+#endif
                 return;
             }
 
             if (!SetNewState(newState, index)) return;
             ExitPreviousState();
             EnterNewState();
+#if UNITY_EDITOR
+            OnCurrentStateChanged?.Invoke();
+#endif
         }
         
         private bool SetNewState(TStateId newState, int index)

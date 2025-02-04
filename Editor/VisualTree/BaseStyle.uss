@@ -1,0 +1,20 @@
+VisualElement {
+}
+
+.header {
+    background-color: rgba(0, 0, 0, 0.16);
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    align-content: auto;
+}
+
+.header-label {
+    -unity-font-style: bold;
+    font-size: 14px;
+}
+
+.section-label {
+    -unity-font-style: bold;
+    font-size: 14px;
+}

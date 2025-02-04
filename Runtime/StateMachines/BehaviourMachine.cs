@@ -26,6 +26,12 @@ namespace MasterSM
         
         // Capabilities
         protected readonly Dictionary<Type, BaseCapability<TStateId, TStateMachine>> Capabilities = new();
+        
+#if UNITY_EDITOR
+        // Events for Custom Editor
+        private event Action OnLayerAdded;
+        private event Action OnLayerRemoved;
+#endif
 
         internal void Initialize()
         {
@@ -121,6 +127,10 @@ namespace MasterSM
                 Machine = (TStateMachine)this
             };
             Layers.Add(layerId, layer);
+
+#if UNITY_EDITOR
+            OnLayerAdded?.Invoke();
+#endif
             return layer;
         }
         
@@ -136,6 +146,10 @@ namespace MasterSM
 
             if (layer.CurrentState != null)
                 layer.ChangeState(default);
+            
+#if UNITY_EDITOR
+            OnLayerRemoved?.Invoke();
+#endif
             
             Layers.Remove(layerId);
         }

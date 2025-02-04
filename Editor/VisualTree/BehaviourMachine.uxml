@@ -1,0 +1,19 @@
+<engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Packages/com.mastersix.mastersm/Editor/VisualTree/BaseStyle.uss?fileID=7433441132597879392&amp;guid=defde3371c2c1af48bebfa62ed4c471e&amp;type=3#BaseStyle" />
+    <Style src="project://database/Packages/com.mastersix.mastersm/Editor/VisualTree/BehaviourMachineStyle.uss?fileID=7433441132597879392&amp;guid=32da6a615c110db4ba3203bb8e81d237&amp;type=3#BehaviourMachineStyle" />
+    <engine:VisualElement name="root" style="flex-grow: 1;">
+        <engine:VisualElement name="HeaderContainer" class="header">
+            <engine:Label text="BehaviourMachine" name="HeaderTitle" class="header-label" />
+        </engine:VisualElement>
+        <!-- <engine:TwoPaneSplitView name="InspectorSplitView" orientation="Vertical" fixed-pane-initial-dimension="105" style="min-height: 300px;"> -->
+            <!-- <engine:ScrollView name="DefaultInspectorContainer" language-direction="Inherit" horizontal-scroller-visibility="Hidden" enabled="true" style="flex-grow: 0; align-items: flex-start; height: 100px; width: 100%;"> -->
+            <engine:VisualElement name="DefaultInspectorContainer" style="flex-grow: 1;">
+                <engine:Label name="FieldsLabel" text="Fields" class="section-label" />
+            </engine:VisualElement>
+            <!-- </engine:ScrollView> -->
+            <engine:VisualElement name="LayersContainer" style="flex-grow: 1;">
+                <engine:Label name="LayersLabel" text="Layers" class="section-label" />
+            </engine:VisualElement>
+        <!-- </engine:TwoPaneSplitView> -->
+    </engine:VisualElement>
+</engine:UXML>

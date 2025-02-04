@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using UnityEditor;
 
@@ -130,6 +132,37 @@ namespace MasterSM.Editor
             var arguments2 = type2.GetGenericArguments();
 
             return arguments1.Length == arguments2.Length;
+        }
+
+        // public static IEnumerable<FieldInfo> GetFields(Type type, BindingFlags bindingFlags, params string[] fieldNames)
+        // {
+        //     return type.GetFields(bindingFlags).Where(field => fieldNames.Contains(field.Name));
+        // }
+        //
+        // public static IEnumerable<PropertyInfo> GetProperties(Type type, BindingFlags bindingFlags, params string[] propertyNames)
+        // {
+        //     return type.GetProperties(bindingFlags).Where(property => propertyNames.Contains(property.Name));
+        // }
+        //
+        // public static IEnumerable<EventInfo> GetEvents(Type type, BindingFlags bindingFlags, params string[] eventNames)
+        // {
+        //     return type.GetEvents(bindingFlags).Where(e => eventNames.Contains(e.Name));
+        // }
+        
+        public static Func<T> CreateFieldGetter<T>(object objectTarget, FieldInfo fieldInfo)
+        {
+            var instanceParam = Expression.Constant(objectTarget);
+            var fieldAccess = Expression.Field(instanceParam, fieldInfo);
+            var lambda = Expression.Lambda<Func<T>>(fieldAccess);
+            return lambda.Compile();
+        }
+
+        public static Func<T> CreatePropertyGetter<T>(object objectTarget, PropertyInfo propertyInfo)
+        {
+            var instanceParam = Expression.Constant(objectTarget);
+            var fieldAccess = Expression.Property(instanceParam, propertyInfo);
+            var lambda = Expression.Lambda<Func<T>>(fieldAccess);
+            return lambda.Compile();
         }
     }
 }
