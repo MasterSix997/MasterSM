@@ -50,14 +50,14 @@ namespace MasterSM
         /// This method is called by State Machine to try to make a transition to this state
         /// </summary>
         /// <returns>If this state can be entered, returns true. Otherwise, returns false.</returns>
-        public bool CanEnter();
+        public bool StateCanEnter();
 
         /// <summary>
         /// Checks whether this state can be exited.
         /// This method is called by State Machine to see if you can leave this state, or if it is "locked".
         /// </summary>
         /// <returns></returns>
-        public bool CanExit()
+        public bool StateCanExit()
         {
             return true; 
         }
@@ -65,21 +65,21 @@ namespace MasterSM
         /// <summary>
         /// This method is called by the State Machine when the state is created.
         /// </summary>
-        public void OnCreated() { }
+        public void StateOnCreated() { }
         
         /// <summary>
         /// This method is called by the State Machine when a transition from another state to this.
         /// </summary>
-        public void OnEnter() { }
+        public void StateOnEnter() { }
         
         /// <summary>
         /// This method is called by the State Machine when a transition from this state to another,
         /// or when the sub state machine is exited.
         /// </summary>
-        public void OnExit() { }
+        public void StateOnExit() { }
 
-        public void OnUpdate() { }
+        public void StateOnUpdate() { }
         
-        public void OnFixedUpdate() { }
+        public void StateOnFixedUpdate() { }
     }
 }

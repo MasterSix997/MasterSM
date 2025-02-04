@@ -69,74 +69,108 @@ namespace MasterSM
             
             _baseMachine.Machine = (TStateMachine)(IStateMachine)this;
         }
-
-        /// <summary>
-        /// <inheritdoc cref="IState{TStateId,TStateMachine}.CanEnter"/>
-        /// </summary>
-        /// <returns></returns>
-        public abstract bool CanEnter();
         
-        /// <summary>
-        /// <inheritdoc cref="IState{TStateId,TStateMachine}.CanExit"/>
-        /// </summary>
-        /// <returns>If true, the state can exit. If false, the state cannot exit.</returns>
-        public virtual bool CanExit() => true;
+        public bool StateCanEnter() => CanEnter();
+        public bool StateCanExit() => CanExit();
 
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId,TStateMachine}.OnCreated"/><br/>
+        /// <inheritdoc cref="IState{TStateId,TStateMachine}.StateOnCreated"/><br/>
         /// Call this on the implementation e.g. base.OnCreated();
         /// </summary>
-        public virtual void OnCreated()
+        public void StateOnCreated()
         {
+            OnCreated();
             _baseMachine.OnCreated();
-            // _baseMachine.EnterNewState();
             
             foreach (var layer in Layers.Values)
             {
                 layer.OnCreated();
-                // layer.EnterNewState();
             }
+            
         }
 
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId,TStateMachine}.OnEnter"/>
+        /// <inheritdoc cref="IState{TStateId,TStateMachine}.StateOnEnter"/>
         /// Calls this on the implementation e.g. base.OnEnter();
         /// </summary>
-        public virtual void OnEnter()
+        public void StateOnEnter()
         {
             _baseMachine.EnterMachine();
+            OnEnter();
         }
 
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId,TStateMachine}.OnExit"/>
+        /// <inheritdoc cref="IState{TStateId,TStateMachine}.StateOnExit"/>
         /// Calls this on the implementation e.g. base.OnExit();
         /// </summary>
-        public virtual void OnExit()
+        public void StateOnExit()
         {
             _baseMachine.ExitMachine();
+            OnExit();
         }
 
         /// <summary>
         /// Calls this on the implementation e.g. base.OnUpdate();
         /// </summary>
-        public virtual void OnUpdate()
+        public void StateOnUpdate()
         {
             _baseMachine.OnUpdate();
             
             foreach (var layer in Layers.Values)
                 layer.OnUpdate();
+            
+            OnUpdate();
         }
 
         /// <summary>
         /// Calls this on the implementation e.g. base.OnFixedUpdate();
         /// </summary>
-        public virtual void OnFixedUpdate()
+        public void StateOnFixedUpdate()
         {
             _baseMachine.OnFixedUpdate();
             
             foreach (var layer in Layers.Values)
                 layer.OnFixedUpdate();
+            
+            OnFixedUpdate();
         }
+        
+        /// <summary>
+        /// <inheritdoc cref="IState{TStateId,TStateMachine}.StateCanEnter"/>
+        /// </summary>
+        /// <returns></returns>
+        public abstract bool CanEnter();
+        
+        /// <summary>
+        /// <inheritdoc cref="IState{TStateId,TStateMachine}.StateCanExit"/>
+        /// </summary>
+        /// <returns>If true, the state can exit. If false, the state cannot exit.</returns>
+        public virtual bool CanExit() => true;
+        
+        /// <summary>
+        /// <inheritdoc cref="IState{TStateId, TStateMachine}.StateOnCreated"/>
+        /// </summary>
+        public virtual void OnCreated() { }
+        
+        /// <summary>
+        /// <inheritdoc cref="IState{TStateId, TStateMachine}.StateOnEnter"/>
+        /// </summary>
+        public virtual void OnEnter() { }
+        
+        /// <summary>
+        /// <inheritdoc cref="IState{TStateId, TStateMachine}.StateOnExit"/>
+        /// </summary>
+        public virtual void OnExit() { }
+
+        /// <summary>
+        /// <inheritdoc cref="IState{TStateId, TStateMachine}.StateOnUpdate"/>
+        /// </summary>
+        public virtual void OnUpdate() { }
+        
+        /// <summary>
+        /// <inheritdoc cref="IState{TStateId, TStateMachine}.StateOnFixedUpdate"/>
+        /// </summary>
+        public virtual void OnFixedUpdate() { }
 
         /// <summary>
         /// <inheritdoc cref="BaseMachine{TStateId,TStateMachine}.AddState"/>

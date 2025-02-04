@@ -59,40 +59,48 @@ namespace MasterSM
             _initialized = true;
         }
 
+        public bool StateCanEnter() => CanEnter();
+        public bool StateCanExit() => CanExit();
+        public void StateOnCreated() => OnCreated();
+        public void StateOnEnter() => OnEnter();
+        public void StateOnExit() => OnExit();
+        public void StateOnUpdate() => OnUpdate();
+        public void StateOnFixedUpdate() => OnFixedUpdate();
+
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId, TStateMachine}.CanEnter"/>
+        /// <inheritdoc cref="IState{TStateId, TStateMachine}.StateCanEnter"/>
         /// </summary>
         /// <returns></returns>
         public abstract bool CanEnter();
 
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId, TStateMachine}.CanExit"/>
+        /// <inheritdoc cref="IState{TStateId, TStateMachine}.StateCanExit"/>
         /// </summary>
         /// <returns>If this state can be exited, returns true. Otherwise, returns false.</returns>
         public virtual bool CanExit() => true;
         
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId, TStateMachine}.OnCreated"/>
+        /// <inheritdoc cref="IState{TStateId, TStateMachine}.StateOnCreated"/>
         /// </summary>
         public virtual void OnCreated() { }
         
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId, TStateMachine}.OnEnter"/>
+        /// <inheritdoc cref="IState{TStateId, TStateMachine}.StateOnEnter"/>
         /// </summary>
         public virtual void OnEnter() { }
         
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId, TStateMachine}.OnExit"/>
+        /// <inheritdoc cref="IState{TStateId, TStateMachine}.StateOnExit"/>
         /// </summary>
         public virtual void OnExit() { }
 
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId, TStateMachine}.OnUpdate"/>
+        /// <inheritdoc cref="IState{TStateId, TStateMachine}.StateOnUpdate"/>
         /// </summary>
         public virtual void OnUpdate() { }
 
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId, TStateMachine}.OnFixedUpdate"/>
+        /// <inheritdoc cref="IState{TStateId, TStateMachine}.StateOnFixedUpdate"/>
         /// </summary>
         public virtual void OnFixedUpdate() { }
     }

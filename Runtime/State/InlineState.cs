@@ -54,30 +54,30 @@ namespace MasterSM
         /// <summary>
         /// Don't call this method, it's called by the state machine.
         /// </summary>
-        public bool CanEnter() => canEnter();
+        public bool StateCanEnter() => canEnter();
         /// <summary>
         /// Don't call this method, it's called by the state machine.
         /// </summary>
-        public bool CanExit() => canExit == null || canExit();
+        public bool StateCanExit() => canExit == null || canExit();
         /// <summary>
         /// Don't call this method, it's called by the state machine.
         /// </summary>
-        public void OnCreated() => onCreated?.Invoke();
+        public void StateOnCreated() => onCreated?.Invoke();
         /// <summary>
         /// Don't call this method, it's called by the state machine.
         /// </summary>
-        public void OnEnter() => onEnter?.Invoke();
+        public void StateOnEnter() => onEnter?.Invoke();
         /// <summary>
         /// Don't call this method, it's called by the state machine.
         /// </summary>
-        public void OnExit() => onExit?.Invoke();
+        public void StateOnExit() => onExit?.Invoke();
         /// <summary>
         /// Don't call this method, it's called by the state machine.
         /// </summary>
-        public void OnUpdate() => onUpdate?.Invoke();
+        public void StateOnUpdate() => onUpdate?.Invoke();
         /// <summary>
         /// Don't call this method, it's called by the state machine.
         /// </summary>
-        public void OnFixedUpdate() => onFixedUpdate?.Invoke();
+        public void StateOnFixedUpdate() => onFixedUpdate?.Invoke();
     }
 }

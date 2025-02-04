@@ -45,13 +45,7 @@ namespace MasterSM
 
                 if (Created)
                 {
-                    ExecuteEventOnState(StateEvent.OnCreated, false, state);
-                    // state.OnCreated();
-                    // if (state.Extensions != null)
-                    // {
-                    //     foreach (var extension in state.Extensions)
-                    //         extension.OnCreated(state);
-                    // }
+                    ExecuteOnCreated(state);
                 }
             }
             
@@ -106,12 +100,11 @@ namespace MasterSM
             if (!States.TryGetValue(id, out var stateToRemove))
                 return;
             
-            if (stateToRemove == CurrentState && CurrentState != null)
-            {
-                CurrentState.OnExit();
-                CurrentState.IsActive = false;
-                CurrentState = null;
-            }
+            if (CurrentIndex >= StatesOrder.IndexOf(id))
+                CurrentIndex--;
+            
+            if (PreviousIndex >= StatesOrder.IndexOf(id))
+                PreviousIndex--;
 
             States.Remove(id);
             StatesOrder.Remove(id);
@@ -122,8 +115,11 @@ namespace MasterSM
                 {
                     ChangeState(newState.id, newState.index);
                 }
-                else
+                else if (CurrentState != null)
                 {
+                    // CurrentState.StateOnExit();
+                    ExecuteOnExit(CurrentState);
+                    CurrentState.IsActive = false;
                     CurrentState = null;
                 }
             }
@@ -168,7 +164,8 @@ namespace MasterSM
             if (CurrentState == null)
                 return;
             
-            CurrentState.OnExit();
+            // CurrentState.StateOnExit();
+            ExecuteOnExit(CurrentState);
             CurrentState.IsActive = false;
             CurrentState = null;
         }
@@ -184,7 +181,7 @@ namespace MasterSM
                 return;
             
             CurrentState.IsActive = true;
-            CurrentState.OnEnter();
+            CurrentState.StateOnEnter();
         }
 
         /// <summary>
@@ -243,7 +240,7 @@ namespace MasterSM
                 return;
             
             CurrentState.IsActive = true;
-            ExecuteEventOnState(StateEvent.OnEnter, true);
+            ExecuteOnEnter(CurrentState);
         }
         
         private void ExitPreviousState()
@@ -251,7 +248,8 @@ namespace MasterSM
             if (PreviousState == null)
                 return;
             
-            PreviousState.OnExit();
+            // PreviousState.StateOnExit();
+            ExecuteOnExit(PreviousState);
             PreviousState.IsActive = false;
 
             if (PreviousState.Extensions == null) return;
@@ -277,7 +275,7 @@ namespace MasterSM
             
             for (var i = 0; i < maxIndex; i++)
             {
-                if (States[StatesOrder[i]].Enabled && States[StatesOrder[i]].CanEnter())
+                if (States[StatesOrder[i]].Enabled && States[StatesOrder[i]].StateCanEnter())
                 {
                     state = (StatesOrder[i], i);
                     
@@ -299,9 +297,9 @@ namespace MasterSM
             }
             else
             {
-                if (CurrentState.CanExit())
+                if (CurrentState.StateCanExit())
                 {
-                    var maxIndex = CurrentState.CanEnter() ? CurrentIndex : StatesOrder.Count;
+                    var maxIndex = CurrentState.StateCanEnter() ? CurrentIndex : StatesOrder.Count;
                     if (TryGetTransition(out var state, maxIndex))
                     {
                         ChangeState(state.id, state.index);
@@ -318,32 +316,24 @@ namespace MasterSM
             
             foreach (var state in States.Values)
             {
-                ExecuteEventOnState(StateEvent.OnCreated, false, state);
-                // state.OnCreated();
-                // if (state.Extensions == null) 
-                //     continue;
-                //
-                // foreach (var extension in state.Extensions)
-                //     extension.OnCreated(state);
+                ExecuteOnCreated(state);
             }
 
             if (TryGetTransition(out var newState, States.Count))
             {
                 ChangeState(newState.id, newState.index);
-                // CurrentIndex = newState.index;
-                // CurrentState = States[StatesOrder[CurrentIndex]];
             }
         }
 
         public void OnUpdate()
         {
             TestTransitions();
-            ExecuteEventOnState(StateEvent.OnUpdate, true);
+            ExecuteOnUpdate(CurrentState);
         }
 
         public void OnFixedUpdate()
         {
-            ExecuteEventOnState(StateEvent.OnFixedUpdate, true);
+            ExecuteOnFixedUpdate(CurrentState);
         }
         
         private enum StateEvent
@@ -355,63 +345,78 @@ namespace MasterSM
             OnFixedUpdate
         }
 
-        private void ExecuteEventOnState(StateEvent stateEvent, bool isCurrentState, IState<TStateId, TStateMachine> state = null)
+        private void ExecuteOnCreated(IState<TStateId, TStateMachine> state)
         {
-            if (isCurrentState)
-                state = CurrentState;
-            
             if (state == null)
                 return;
-            
-            switch (stateEvent)
-            {
-                case StateEvent.OnCreated:
-                    state.OnCreated();
-                    break;
-                case StateEvent.OnEnter:
-                    state.OnEnter();
-                    break;
-                case StateEvent.OnExit:
-                    state.OnExit();
-                    break;
-                case StateEvent.OnUpdate:
-                    state.OnUpdate();
-                    break;
-                case StateEvent.OnFixedUpdate:
-                    state.OnFixedUpdate();
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(stateEvent), stateEvent, null);
-            }
 
+            state.StateOnCreated();
             if (state.Extensions == null) 
                 return;
 
-            if (isCurrentState && state != CurrentState)
+            foreach (var extension in state.Extensions.Where(extension => extension.enabled))
+            {
+                extension.OnCreated(state);
+            }
+        }
+        
+        private void ExecuteOnEnter(IState<TStateId, TStateMachine> state)
+        {
+            if (state == null)
+                return;
+
+            state.StateOnEnter();
+            if (state.Extensions == null) 
+                return;
+
+            foreach (var extension in state.Extensions.Where(extension => extension.enabled))
+            {
+                extension.OnEnter();
+            }
+        }
+        
+        private void ExecuteOnExit(IState<TStateId, TStateMachine> state)
+        {
+            if (state == null)
+                return;
+
+            state.StateOnExit();
+            if (state.Extensions == null) 
+                return;
+
+            foreach (var extension in state.Extensions.Where(extension => extension.enabled))
+            {
+                extension.OnExit();
+            }
+        }
+        
+        private void ExecuteOnUpdate(IState<TStateId, TStateMachine> state)
+        {
+            if (state == null)
+                return;
+
+            state.StateOnUpdate();
+            if (state.Extensions == null) 
+                return;
+
+            foreach (var extension in state.Extensions.Where(extension => extension.enabled))
+            {
+                extension.OnUpdate();
+            }
+        }
+
+        private void ExecuteOnFixedUpdate(IState<TStateId, TStateMachine> state)
+        {
+            if (state == null)
                 return;
             
-            foreach (var extension in state.Extensions.Where(extension => stateEvent == StateEvent.OnCreated || extension.enabled))
+            state.StateOnFixedUpdate();
+            if (state.Extensions == null)
+                return;
+
+            foreach (var extension in state.Extensions.Where(extension => extension.enabled))
             {
-                switch (stateEvent)
-                {
-                    case StateEvent.OnCreated:
-                        extension.OnCreated(state);
-                        break;
-                    case StateEvent.OnEnter:
-                        extension.OnEnter();
-                        break;
-                    case StateEvent.OnExit:
-                        extension.OnExit();
-                        break;
-                    case StateEvent.OnUpdate:
-                        extension.OnUpdate();
-                        break;
-                    case StateEvent.OnFixedUpdate:
-                        extension.OnFixedUpdate();
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(stateEvent), stateEvent, null);
-                }
+                extension.OnFixedUpdate();
             }
         }
         
