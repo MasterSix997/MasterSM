@@ -38,3 +38,9 @@
     color: gray;
     border-color: #222222;
 }
+
+.previous-state .state-container {
+    background-color: rgb(35, 35, 35);
+    color: gray;
+    border-color: #222222;
+}

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace MasterSM
@@ -44,11 +45,16 @@ namespace MasterSM
 
         public IEnumerable<(TStateId id, IState<TStateId, TStateMachine> state)> GetStatesByLowestPriority()
         {
-            // return states.AsEnumerable().Reverse();
-            for (var i = states.Count - 1; i >= 0; i--)
-            {
-                yield return (stateIds[i], states[i]);
-            }
+            return GetStates();
+            // for (var i = states.Count - 1; i >= 0; i--)
+            // {
+            //     yield return (stateIds[i], states[i]);
+            // }
+        }
+
+        public IEnumerable<(TStateId id, IState<TStateId, TStateMachine> state)> GetStates()
+        {
+            return states.Select((t, i) => (stateIds[i], t));
         }
     }
 }

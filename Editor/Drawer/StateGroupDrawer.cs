@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 namespace MasterSM.Editor.Drawer
 {
     [CustomPropertyDrawer(typeof(StateGroup<,>))]
-    public class StateGroupDrawer : PropertyDrawer
+    internal class StateGroupDrawer : PropertyDrawer
     {
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
         {

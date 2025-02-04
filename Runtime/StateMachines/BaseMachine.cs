@@ -333,7 +333,7 @@ namespace MasterSM
             }
         }
 
-        public void OnCreated()
+        public void OnCreated(bool tryGetTransition = true)
         {
             Created = true;
             if (States.Count == 0)
@@ -344,6 +344,7 @@ namespace MasterSM
                 ExecuteOnCreated(state);
             }
 
+            if (!tryGetTransition) return;
             if (TryGetTransition(out var newState, States.Count))
             {
                 ChangeState(newState.id, newState.index);
@@ -359,15 +360,6 @@ namespace MasterSM
         public void OnFixedUpdate()
         {
             ExecuteOnFixedUpdate(CurrentState);
-        }
-        
-        private enum StateEvent
-        {
-            OnCreated,
-            OnEnter,
-            OnExit,
-            OnUpdate,
-            OnFixedUpdate
         }
 
         private void ExecuteOnCreated(IState<TStateId, TStateMachine> state)

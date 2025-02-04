@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace MasterSM.Editor.Drawer
 {
     [CustomPropertyDrawer(typeof(StateExtension<,>), true)]
-    public class StateExtensionDrawer : PropertyDrawer
+    internal class StateExtensionDrawer : PropertyDrawer
     {
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
         {

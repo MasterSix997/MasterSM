@@ -52,6 +52,12 @@ namespace MasterSM
         protected List<TStateId> StatesOrder => _baseMachine.StatesOrder;
         protected int CurrentIndex => _baseMachine.CurrentIndex;
         
+#if UNITY_EDITOR
+        // Events for Custom Editor
+        public event Action OnLayerAdded;
+        public event Action OnLayerRemoved;
+#endif
+        
         /// <summary>
         /// <inheritdoc cref="IState{TStateId,TStateMachine}.Initialize"/>
         /// </summary>
@@ -80,11 +86,11 @@ namespace MasterSM
         public void StateOnCreated()
         {
             OnCreated();
-            _baseMachine.OnCreated();
+            _baseMachine.OnCreated(false);
             
             foreach (var layer in Layers.Values)
             {
-                layer.OnCreated();
+                layer.OnCreated(false);
             }
             
         }
@@ -236,6 +242,10 @@ namespace MasterSM
                 Machine = (TStateMachine)(IStateMachine)this
             };
             Layers.Add(layerId, layer);
+            
+#if UNITY_EDITOR
+            OnLayerAdded?.Invoke();
+#endif
             return layer;
         }
 
@@ -253,6 +263,10 @@ namespace MasterSM
                 layer.ChangeState(default);
             
             Layers.Remove(layerId);
+
+#if UNITY_EDITOR
+            OnLayerRemoved?.Invoke();
+#endif
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 
-namespace MasterSM.Editor
+namespace MasterSM.Editor.Utils
 {
     internal struct ReflectionValue<T>
     {

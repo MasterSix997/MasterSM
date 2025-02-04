@@ -1,4 +1,5 @@
 using MasterSM.Editor.Elements;
+using MasterSM.Editor.Utils;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -8,7 +9,7 @@ namespace MasterSM.Editor.InspectorEditor
 {
     [CustomEditor(typeof(BaseCapability<,>), true)]
     [CanEditMultipleObjects]
-    public class CapabilityEditor : UnityEditor.Editor
+    internal class CapabilityEditor : UnityEditor.Editor
     {
         public override VisualElement CreateInspectorGUI()
         {

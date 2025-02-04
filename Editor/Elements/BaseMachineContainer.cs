@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using MasterSM.Editor.Utils;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Action = System.Action;
@@ -24,12 +24,13 @@ namespace MasterSM.Editor.Elements
         private const string StatesOrderListField = "StatesOrder";
         private const string CurrentStateIndexProperty = "CurrentIndex";
         private const string PreviousStateIndexProperty = "PreviousIndex";
+        private const string IsActiveProperty = "IsActive";
         private const string OnStateAddedEvent = "OnStateAdded";
         private const string OnStateRemovedEvent = "OnStateRemoved";
         private const string OnCurrentStateChanged = "OnCurrentStateChanged";
             
         private object _target;
-        private string _layerName = "States";
+        // private string _layerName = "States";
 
         private ReflectionValue<IDictionary> _statesDict; // IStateId, IState<TStateId, TStateMachine>
         private ReflectionValue<IList> _statesOrder; // TStateId
@@ -49,7 +50,9 @@ namespace MasterSM.Editor.Elements
 
         public BaseMachineContainer(object target, string layerName) : this(target)
         {
-            _layerName = layerName;
+            _layerNameLabel = new Label(layerName);
+            _layerNameLabel.AddToClassList(ClassSectionLabel);
+            _header.Add(_layerNameLabel);
         }
         
         public BaseMachineContainer(object target)
@@ -67,6 +70,8 @@ namespace MasterSM.Editor.Elements
             RegisterCallback<AttachToPanelEvent>(OnAttachToPanel);
             RegisterCallback<DetachFromPanelEvent>(OnDetachFromPanel);
             AddToClassList(ClassBaseMachineContainer);
+            
+            CreateElements();
         }
 
         private void OnAttachToPanel(AttachToPanelEvent evt)
@@ -75,7 +80,6 @@ namespace MasterSM.Editor.Elements
             _onStateRemoved.Subscribe();
             _onCurrentStateChanged.Subscribe();
             
-            CreateElements();
             InitializeReflection();
             UpdateAll();
         }
@@ -91,10 +95,6 @@ namespace MasterSM.Editor.Elements
         {
             _header = new VisualElement();
             Add(_header);
-
-            _layerNameLabel = new Label(_layerName);
-            _layerNameLabel.AddToClassList(ClassSectionLabel);
-            _header.Add(_layerNameLabel);
             
             _statesContainer = new VisualElement();
             Add(_statesContainer);
@@ -107,6 +107,7 @@ namespace MasterSM.Editor.Elements
             _currentState.Update();
             _previousState.Update();
         }
+        
         private void UpdateAll()
         {
             _currentState.Update();
@@ -153,7 +154,7 @@ namespace MasterSM.Editor.Elements
             _currentStateIndex = -1;
             _previousStateIndex = -1;
 
-            var statesArray = _statesDict.Value.Values.Cast<object>().ToArray();
+            // var statesArray = _statesDict.Value.Values.Cast<object>().ToArray();
             for (var i = 0; i < _cachedStateTexts.Length; i++)
             {
                 var stateText = _cachedStateTexts[i];
@@ -166,10 +167,13 @@ namespace MasterSM.Editor.Elements
                 stateContainer.Add(header);
 
                 header.Add(new Label(stateText));
-                
-                var subMachineContainer = MachineResolver.ResolveStateSubMachine(statesArray[i]);
-                if (subMachineContainer != null)
+
+                var state = _statesDict.Value[_statesOrder.Value[i]];
+                if (EditorUtils.ImplementsInterface(state.GetType(), typeof(IMachineWithLayers<,>)))
+                {
+                    var subMachineContainer = new MachineWithLayers(state);
                     stateContainer.Add(subMachineContainer);
+                }
             }
         }
 

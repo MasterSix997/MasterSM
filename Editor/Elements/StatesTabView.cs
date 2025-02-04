@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 
 namespace MasterSM.Editor.Elements
 {
-    public class StatesTabView : VisualElement
+    internal class StatesTabView : VisualElement
     {
         public TabView TabView { get; private set; }
         public VisualElement TabViewHeader { get; private set; }

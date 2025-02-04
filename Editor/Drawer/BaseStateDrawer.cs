@@ -1,4 +1,5 @@
 ﻿using MasterSM.Editor.Elements;
+using MasterSM.Editor.Utils;
 using UnityEditor;
 using UnityEngine.UIElements;
 using Exception = System.Exception;
@@ -8,7 +9,7 @@ namespace MasterSM.Editor.Drawer
     // [CustomPropertyDrawer(typeof(BaseState<,>), true)]
     // [CustomPropertyDrawer(typeof(SubStateMachine<,,>), true)]
     [CustomPropertyDrawer(typeof(IState<,>), true)]
-    public class BaseStateDrawer : PropertyDrawer
+    internal class BaseStateDrawer : PropertyDrawer
     {
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
         {

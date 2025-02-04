@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Reflection;
 using JetBrains.Annotations;
+using MasterSM.Editor.Elements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace MasterSM.Editor.Elements
+namespace MasterSM.Editor.Utils
 {
     internal static class MachineResolver
     {
@@ -13,7 +13,7 @@ namespace MasterSM.Editor.Elements
         private const string LayersPropertyName = "Layers";
         
         [CanBeNull]
-        public static VisualElement ResolveBase(object target)
+        public static BaseMachineContainer ResolveBase(object target)
         {
             var baseMachineField = ResolveBaseMachine(target);
             if (baseMachineField == null)
@@ -24,6 +24,8 @@ namespace MasterSM.Editor.Elements
                 return null;
 
             var machineContainer = new BaseMachineContainer(baseMachine);
+            // machineContainer.Q<Label>("layer-name-label").style.display = DisplayStyle.None;
+            // machineContainer.HideLayerName();
             return machineContainer;
         }
 
@@ -48,7 +50,7 @@ namespace MasterSM.Editor.Elements
         }
 
         [CanBeNull]
-        public static BaseMachineContainer ResolveStateSubMachine(object target)
+        public static VisualElement ResolveStateSubMachine(object target)
         {
             var baseType = target.GetType().BaseType;
             if (baseType == null || !EditorUtils.IsSameTypeIgnoringGenericArguments(baseType, typeof(SubStateMachine<,,>)))
@@ -75,8 +77,19 @@ namespace MasterSM.Editor.Elements
             var layersProperty = type.GetProperty(LayersPropertyName, BindingFlags.Instance | BindingFlags.NonPublic);
             if (layersProperty == null)
             {
-                Debug.LogError($"'{type.Name}' does not have a field named '{LayersPropertyName}'.");
-                return null;
+                type = type.BaseType;
+                if (type == null)
+                {
+                    Debug.LogError($"{target.GetType().Name} does not have a base type.");
+                    return null;
+                }
+                
+                layersProperty = type.GetProperty(LayersPropertyName, BindingFlags.Instance | BindingFlags.NonPublic);
+                if (layersProperty == null)
+                {
+                    Debug.LogError($"'{target.GetType().Name}' does not have a property named '{LayersPropertyName}'.");
+                    return null;
+                }
             }
 
             if (layersProperty.GetValue(target) is not IDictionary layers)
@@ -86,6 +99,7 @@ namespace MasterSM.Editor.Elements
             }
 
             var layersContainer = new VisualElement();
+            var layerIndex = 0;
             foreach (DictionaryEntry layerEntry in layers)
             {
                 if (!EditorUtils.IsSameTypeIgnoringGenericArguments(layerEntry.Value.GetType(), typeof(BaseMachine<,>)))
@@ -94,7 +108,8 @@ namespace MasterSM.Editor.Elements
                     continue;
                 }
             
-                var layerContainer = new BaseMachineContainer(layerEntry.Value, layerEntry.Key.GetType().ToString());
+                var layerContainer = new BaseMachineContainer(layerEntry.Value, $"Layer {layerIndex++}");
+                
                 layersContainer.Add(layerContainer);
             }
 

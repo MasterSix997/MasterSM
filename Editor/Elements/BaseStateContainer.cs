@@ -1,11 +1,12 @@
-﻿using UnityEditor;
+﻿using MasterSM.Editor.Utils;
+using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace MasterSM.Editor.Elements
 {
-    public class BaseStateContainer : VisualElement
+    internal class BaseStateContainer : VisualElement
     {
         public BaseStateContainer() { }
         

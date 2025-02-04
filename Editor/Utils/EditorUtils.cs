@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using UnityEditor;
 
-namespace MasterSM.Editor
+namespace MasterSM.Editor.Utils
 {
-    public static class EditorUtils
+    internal static class EditorUtils
     {
         public static bool HasStateAttribute(SerializedProperty property, out string stateName)
         {

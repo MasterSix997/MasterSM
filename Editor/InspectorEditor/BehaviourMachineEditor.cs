@@ -1,4 +1,3 @@
-using System.Reflection;
 using MasterSM.Editor.Elements;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -9,7 +8,7 @@ namespace MasterSM.Editor.InspectorEditor
 {
     [CustomEditor(typeof(BehaviourMachine<,>), true)]
     [CanEditMultipleObjects]
-    public class BehaviourMachineEditor : UnityEditor.Editor
+    internal class BehaviourMachineEditor : UnityEditor.Editor
     {
         private const string HeaderContainerName = "HeaderContainer"; 
         private const string HeaderTitleName = "HeaderTitle"; 
@@ -43,9 +42,9 @@ namespace MasterSM.Editor.InspectorEditor
             _defaultInspectorContainer.RemoveAt(1); //script field
             
             if (Application.isPlaying)
-            {
                 EditorApplication.update += DelayedInit;
-            }
+            else
+                _layersContainer.style.display = DisplayStyle.None;
             
             return root;
         }
@@ -53,25 +52,7 @@ namespace MasterSM.Editor.InspectorEditor
         private void DelayedInit()
         {
             EditorApplication.update -= DelayedInit;
-
-            var baseMachineContainer = MachineResolver.ResolveBase(target);
-            if (baseMachineContainer != null)
-                _layersContainer.Add(baseMachineContainer);
-            
-            var machineLayersContainer = MachineResolver.ResolveLayers(target);
-            if (machineLayersContainer != null)
-                _layersContainer.Add(machineLayersContainer);
-
-            // var behaviourMachineType = target.GetType().BaseType!;
-            //
-            // var baseMachineField = behaviourMachineType.GetField(BaseMachineField, BindingFlags.Instance | BindingFlags.NonPublic);
-            // if (baseMachineField == null)
-            // {
-            //     Debug.LogError("Base machine field not found.");
-            //     return;
-            // }
-
-            // _layersContainer.Add(new BaseMachineContainer(baseMachineField.GetValue(target), baseMachineField.FieldType));
+            _layersContainer.Add(new MachineWithLayers(target));
         }
     }
 }

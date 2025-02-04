@@ -29,8 +29,8 @@ namespace MasterSM
         
 #if UNITY_EDITOR
         // Events for Custom Editor
-        private event Action OnLayerAdded;
-        private event Action OnLayerRemoved;
+        public event Action OnLayerAdded;
+        public event Action OnLayerRemoved;
 #endif
 
         internal void Initialize()
@@ -199,12 +199,12 @@ namespace MasterSM
 
         protected virtual void Start()
         {
-            _baseMachine.OnCreated();
+            _baseMachine.OnCreated(true);
             // _baseMachine.EnterNewState();
             
             foreach (var layer in Layers.Values)
             {
-                layer.OnCreated();
+                layer.OnCreated(true);
                 // layer.EnterNewState();
             }
         }

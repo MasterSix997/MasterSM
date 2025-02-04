@@ -12,7 +12,7 @@
             </engine:VisualElement>
             <!-- </engine:ScrollView> -->
             <engine:VisualElement name="LayersContainer" style="flex-grow: 1;">
-                <engine:Label name="LayersLabel" text="Layers" class="section-label" />
+                <engine:Label name="LayersLabel" text="States" class="section-label" />
             </engine:VisualElement>
         <!-- </engine:TwoPaneSplitView> -->
     </engine:VisualElement>
