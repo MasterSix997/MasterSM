@@ -21,17 +21,20 @@ namespace MasterSM
         /// </summary>
         public bool enabled = true;
         
+        public virtual bool CanEnter() { return true; }
+        public virtual bool CanExit() { return true; }
+        
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId,TStateMachine}.OnCreated"/>
+        /// <inheritdoc cref="IState{TStateId,TStateMachine}.StateOnCreated"/>
         /// </summary>
         /// <param name="state">The state that this extension belongs to.</param>
         public virtual void OnCreated(IState<TStateId, TStateMachine> state) { }
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId,TStateMachine}.OnEnter"/>
+        /// <inheritdoc cref="IState{TStateId,TStateMachine}.StateOnEnter"/>
         /// </summary>
         public virtual void OnEnter() { }
         /// <summary>
-        /// <inheritdoc cref="IState{TStateId,TStateMachine}.OnExit"/>
+        /// <inheritdoc cref="IState{TStateId,TStateMachine}.StateOnExit"/>
         /// </summary>
         public virtual void OnExit() { }
         public virtual void OnUpdate() { }

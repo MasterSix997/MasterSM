@@ -21,6 +21,7 @@ namespace MasterSM
         /// <inheritdoc cref="IState{TStateId,TParentMachine}.Machine"/>
         /// </summary>
         [field: NonSerialized] public TParentMachine Machine { get; private set; }
+        
         /// <summary>
         /// <inheritdoc cref="IState{TStateId,TParentMachine}.Priority"/>
         /// </summary>
@@ -51,6 +52,8 @@ namespace MasterSM
         protected Dictionary<TStateId, IState<TStateId, TStateMachine>> States => _baseMachine.States;
         protected List<TStateId> StatesOrder => _baseMachine.StatesOrder;
         protected int CurrentIndex => _baseMachine.CurrentIndex;
+        
+        public TStateId CurrentId => _baseMachine.CurrentId;
         
 #if UNITY_EDITOR
         // Events for Custom Editor

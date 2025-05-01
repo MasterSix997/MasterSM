@@ -23,7 +23,9 @@ namespace MasterSM
         protected Dictionary<TStateId, IState<TStateId, TStateMachine>> States => _baseMachine.States;
         protected List<TStateId> StatesOrder => _baseMachine.StatesOrder;
         protected int CurrentIndex => _baseMachine.CurrentIndex;
-        
+
+        public TStateId CurrentId => _baseMachine.CurrentId;
+
         // Capabilities
         protected readonly Dictionary<Type, BaseCapability<TStateId, TStateMachine>> Capabilities = new();
         
@@ -200,12 +202,10 @@ namespace MasterSM
         protected virtual void Start()
         {
             _baseMachine.OnCreated(true);
-            // _baseMachine.EnterNewState();
             
             foreach (var layer in Layers.Values)
             {
                 layer.OnCreated(true);
-                // layer.EnterNewState();
             }
         }
 

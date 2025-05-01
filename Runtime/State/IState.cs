@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
 
@@ -35,7 +36,23 @@ namespace MasterSM
         /// The extensions are used to add functionality to the state.
         /// </summary>
         [CanBeNull] public List<StateExtension<TStateId, TStateMachine>> Extensions { get; set; }
-        
+
+        public IEnumerable<StateExtension<TStateId, TStateMachine>> EnabledExtensions()
+        {
+            if (Extensions == null) yield break;
+            foreach (var extension in Extensions)
+            {
+                if (extension.enabled)
+                    yield return extension;
+            }
+        }
+
+        public void ExecuteOnExtensions(Action<StateExtension<TStateId, TStateMachine>> action)
+        {
+            foreach (var extension in EnabledExtensions())
+                action(extension);
+        }
+
         /// <summary>
         /// Initializes the state machine.
         /// This method is called by the state machine when it is added to the state machine list.
@@ -57,10 +74,7 @@ namespace MasterSM
         /// This method is called by State Machine to see if you can leave this state, or if it is "locked".
         /// </summary>
         /// <returns></returns>
-        public bool StateCanExit()
-        {
-            return true; 
-        }
+        public bool StateCanExit();
         
         /// <summary>
         /// This method is called by the State Machine when the state is created.

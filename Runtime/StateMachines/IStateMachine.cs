@@ -8,6 +8,7 @@ namespace MasterSM
     public interface IStateMachineImpl<TStateId, TStateMachine> : IStateMachine
         where TStateMachine : IStateMachine
     {
+        public TStateId CurrentId { get; }
         public void AddState(TStateId id, IState<TStateId, TStateMachine> state, int priority = 0);
         public void RemoveState(TStateId id);
         public void ChangeState(TStateId newState);

@@ -25,6 +25,8 @@ namespace MasterSM
         internal int PreviousIndex = -1;
         internal bool Created;
         
+        public TStateId CurrentId => CurrentState == null ? default : CurrentState.Id;
+        
 #if UNITY_EDITOR
         // Events for Custom Editor
         public event Action OnStateAdded;
@@ -273,13 +275,9 @@ namespace MasterSM
             if (PreviousState == null)
                 return;
             
-            // PreviousState.StateOnExit();
             ExecuteOnExit(PreviousState);
             PreviousState.IsActive = false;
-
-            if (PreviousState.Extensions == null) return;
-            foreach (var extension in PreviousState.Extensions.Where(extension => extension.enabled))
-                extension.OnExit();
+            PreviousState.ExecuteOnExtensions(extension => extension.OnExit());
         }
         
         /// <summary>
@@ -289,26 +287,34 @@ namespace MasterSM
         public void RevertToPreviousState()
         {
             if (PreviousState != null)
-            {          
                 ChangeState(PreviousState.Id, PreviousIndex);
-            }
         }
-        
-        public bool TryGetTransition(out (TStateId id, int index) state, int maxIndex)
+
+        private bool TryGetTransition(out (TStateId id, int index) state, int maxIndex)
         {
             state = default;
             
             for (var i = 0; i < maxIndex; i++)
             {
-                if (States[StatesOrder[i]].Enabled && States[StatesOrder[i]].StateCanEnter())
+                if (CanEnter(i))
                 {
                     state = (StatesOrder[i], i);
-                    
                     return true;
                 }
             }
 
             return false;
+
+            bool CanEnter(int i)
+            {
+                if (!States[StatesOrder[i]].Enabled || !States[StatesOrder[i]].StateCanEnter()) 
+                    return false;
+                
+                foreach (var extension in States[StatesOrder[i]].EnabledExtensions())
+                    if (!extension.CanEnter()) return false;
+                    
+                return true;
+            }
         }
         
         private void TestTransitions()
@@ -316,20 +322,17 @@ namespace MasterSM
             if (CurrentState == null)
             {
                 if (TryGetTransition(out var state, States.Count))
-                {
                     ChangeState(state.id, state.index);
-                }
             }
             else
             {
-                if (CurrentState.StateCanExit())
-                {
-                    var maxIndex = CurrentState.StateCanEnter() ? CurrentIndex : StatesOrder.Count;
-                    if (TryGetTransition(out var state, maxIndex))
-                    {
-                        ChangeState(state.id, state.index);
-                    }
-                }
+                if (!CurrentState.StateCanExit()) return;
+                foreach (var extension in CurrentState.EnabledExtensions())
+                    if (!extension.CanExit()) return;
+                    
+                var maxIndex = CurrentState.StateCanEnter() ? CurrentIndex : StatesOrder.Count;
+                if (TryGetTransition(out var state, maxIndex))
+                    ChangeState(state.id, state.index);
             }
         }
 
@@ -340,15 +343,11 @@ namespace MasterSM
                 return;
             
             foreach (var state in States.Values)
-            {
                 ExecuteOnCreated(state);
-            }
 
             if (!tryGetTransition) return;
             if (TryGetTransition(out var newState, States.Count))
-            {
                 ChangeState(newState.id, newState.index);
-            }
         }
 
         public void OnUpdate()
@@ -368,13 +367,7 @@ namespace MasterSM
                 return;
 
             state.StateOnCreated();
-            if (state.Extensions == null) 
-                return;
-
-            foreach (var extension in state.Extensions.Where(extension => extension.enabled))
-            {
-                extension.OnCreated(state);
-            }
+            state.ExecuteOnExtensions(extension => extension.OnCreated(state));
         }
         
         private void ExecuteOnEnter(IState<TStateId, TStateMachine> state)
@@ -383,13 +376,7 @@ namespace MasterSM
                 return;
 
             state.StateOnEnter();
-            if (state.Extensions == null) 
-                return;
-
-            foreach (var extension in state.Extensions.Where(extension => extension.enabled))
-            {
-                extension.OnEnter();
-            }
+            state.ExecuteOnExtensions(extension => extension.OnEnter());
         }
         
         private void ExecuteOnExit(IState<TStateId, TStateMachine> state)
@@ -398,13 +385,7 @@ namespace MasterSM
                 return;
 
             state.StateOnExit();
-            if (state.Extensions == null) 
-                return;
-
-            foreach (var extension in state.Extensions.Where(extension => extension.enabled))
-            {
-                extension.OnExit();
-            }
+            state.ExecuteOnExtensions(extension => extension.OnExit());
         }
         
         private void ExecuteOnUpdate(IState<TStateId, TStateMachine> state)
@@ -413,13 +394,7 @@ namespace MasterSM
                 return;
 
             state.StateOnUpdate();
-            if (state.Extensions == null) 
-                return;
-
-            foreach (var extension in state.Extensions.Where(extension => extension.enabled))
-            {
-                extension.OnUpdate();
-            }
+            state.ExecuteOnExtensions(extension => extension.OnUpdate());
         }
 
         private void ExecuteOnFixedUpdate(IState<TStateId, TStateMachine> state)
@@ -428,32 +403,51 @@ namespace MasterSM
                 return;
             
             state.StateOnFixedUpdate();
-            if (state.Extensions == null)
-                return;
-
-            foreach (var extension in state.Extensions.Where(extension => extension.enabled))
-            {
-                extension.OnFixedUpdate();
-            }
+            state.ExecuteOnExtensions(extension => extension.OnFixedUpdate());
         }
         
-        [CanBeNull]
-        private List<StateExtension<TStateId, TStateMachine>> GetExtensionsInState(IState<TStateId, TStateMachine> state)
-        {
-            var extensions = new List<StateExtension<TStateId, TStateMachine>>();
-            var fields = state.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            foreach (var field in fields)
-            {
-                if (field.FieldType.BaseType.IsGenericType && field.FieldType.BaseType.GetGenericTypeDefinition() == typeof(StateExtension<,>))
-                {
-                    var value = field.GetValue(state);
+        // [CanBeNull]
+        // private static List<StateExtension<TStateId, TStateMachine>> GetExtensionsInState(IState<TStateId, TStateMachine> state)
+        // {
+        //     var extensions = new List<StateExtension<TStateId, TStateMachine>>();
+        //     var fields = state.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        //     foreach (var field in fields)
+        //     {
+        //         if (!field.FieldType.BaseType.IsGenericType || field.FieldType.BaseType.GetGenericTypeDefinition() != typeof(StateExtension<,>)) 
+        //             continue;
+        //         
+        //         var value = field.GetValue(state);
+        //         if (value != null)
+        //             extensions.Add(value as StateExtension<TStateId, TStateMachine>);
+        //     }
+        //     return extensions.Count == 0 ? null : extensions;
+        // }
 
-                    if (value != null)
-                    {
-                        extensions.Add(value as StateExtension<TStateId, TStateMachine>);
-                    }
-                }
+        private static readonly Dictionary<Type, List<FieldInfo>> ExtensionFieldsCache = new();
+        [CanBeNull]
+        private static List<StateExtension<TStateId, TStateMachine>> GetExtensionsInState(IState<TStateId, TStateMachine> state)
+        {
+            var stateType = state.GetType();
+    
+            // Reflection cache by type
+            if (!ExtensionFieldsCache.TryGetValue(stateType, out var fieldInfos))
+            {
+                fieldInfos = stateType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                    .Where(f => f.FieldType.BaseType?.IsGenericType == true && 
+                                f.FieldType.BaseType.GetGenericTypeDefinition() == typeof(StateExtension<,>))
+                    .ToList();
+                ExtensionFieldsCache[stateType] = fieldInfos;
             }
+    
+            // use cached fields to obtain the instances
+            var extensions = new List<StateExtension<TStateId, TStateMachine>>();
+            foreach (var field in fieldInfos)
+            {
+                var value = field.GetValue(state);
+                if (value != null)
+                    extensions.Add(value as StateExtension<TStateId, TStateMachine>);
+            }
+    
             return extensions.Count == 0 ? null : extensions;
         }
     }
