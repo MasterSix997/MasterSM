@@ -13,7 +13,21 @@ namespace MasterSM
         [SerializeReference] private List<TStateId> stateIds = new();
         
         public IReadOnlyList<IState<TStateId, TStateMachine>> States => states;
-    
+
+        public (TStateId id, IState<TStateId, TStateMachine> state) this[TStateId id]
+        {
+            get
+            {
+                var index = stateIds.IndexOf(id);
+                if (index == -1)
+                    throw new ArgumentOutOfRangeException("");
+                
+                return (stateIds[index], states[index]);
+            }
+        }
+
+        public (TStateId id, IState<TStateId, TStateMachine> state) this[int index] => (stateIds[index], states[index]);
+
         public StateGroup(params (TStateId id, IState<TStateId, TStateMachine> state)[] states)
         {
             foreach (var state in states)
@@ -28,6 +42,8 @@ namespace MasterSM
             foreach (var state in states)
                 AddState((TStateId)(object)state.GetType(), state);
         }
+
+        public StateGroup() { }
 
         public void AddState(TStateId id, IState<TStateId, TStateMachine> state)
         {
