@@ -133,7 +133,6 @@ namespace MasterSM
                 }
                 else if (CurrentState != null)
                 {
-                    // CurrentState.StateOnExit();
                     ExecuteOnExit(CurrentState);
                     CurrentState.IsActive = false;
                     CurrentState = null;
@@ -184,7 +183,6 @@ namespace MasterSM
             if (CurrentState == null)
                 return;
             
-            // CurrentState.StateOnExit();
             ExecuteOnExit(CurrentState);
             CurrentState.IsActive = false;
             CurrentState = null;
@@ -197,8 +195,14 @@ namespace MasterSM
         /// </summary>
         public void EnterMachine()
         {
-            if (CurrentState == null)
+            if (CurrentState is {IsActive: true})
                 return;
+
+            if (CurrentState is null)
+            {
+                TestTransitions();
+                return;
+            }
             
             CurrentState.IsActive = true;
             CurrentState.StateOnEnter();
