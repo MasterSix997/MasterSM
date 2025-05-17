@@ -18,7 +18,7 @@ namespace MasterSM
         /// <summary>
         /// The priority of this state machine.
         /// </summary>
-        public int Priority { get; }
+        // public int Priority { get; }
         /// <summary>
         /// Whether this state machine is currently active.
         /// </summary>
@@ -60,7 +60,7 @@ namespace MasterSM
         /// <param name="id"></param>
         /// <param name="machine"></param>
         /// <param name="priority"></param>
-        public void Initialize(TStateId id, TStateMachine machine, int priority);
+        public void Initialize(TStateId id, TStateMachine machine);//, int priority);
         
         /// <summary>
         /// Checks whether this state can be entered.

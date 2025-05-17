@@ -1,4 +1,4 @@
-namespace Tests.Editor
+namespace MasterSM.Tests.Editor
 {
     public class StateMachineTests
     {

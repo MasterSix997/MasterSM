@@ -2,7 +2,7 @@ using System;
 using MasterSM;
 using NUnit.Framework;
 
-namespace Tests.Editor
+namespace MasterSM.Tests.Editor
 {
     public class StateExtensionTests
     {

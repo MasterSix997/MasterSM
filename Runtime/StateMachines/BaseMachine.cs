@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using JetBrains.Annotations;
+using MasterSM.PriorityManagement;
 
 namespace MasterSM
 {
@@ -20,7 +21,9 @@ namespace MasterSM
         [CanBeNull] public IState<TStateId, TStateMachine> PreviousState { get; private set; }
 
         public readonly Dictionary<TStateId, IState<TStateId, TStateMachine>> States = new();
-        public readonly List<TStateId> StatesOrder = new();
+
+        public readonly PriorityManager<TStateId> PriorityManager = new();
+        // public readonly List<TStateId> StatesOrder = new();
         internal int CurrentIndex = -1;
         internal int PreviousIndex = -1;
         internal bool Created;
@@ -34,6 +37,20 @@ namespace MasterSM
         public event Action OnCurrentStateChanged;
 #endif
 
+        public BaseMachine()
+        {
+            PriorityManager.OnChangeOrderEvent.Add(new ChangeOrderEvent
+            {
+                Get = () => CurrentIndex,
+                NewValue = newValue => CurrentIndex = newValue
+            });
+            PriorityManager.OnChangeOrderEvent.Add(new ChangeOrderEvent
+            {
+                Get = () => PreviousIndex,
+                NewValue = newValue => PreviousIndex = newValue
+            });
+        }
+
         /// <summary>
         /// Adds a state to the state machine.
         /// </summary>
@@ -44,7 +61,7 @@ namespace MasterSM
         {
             if (!state.Initialized)
             {
-                state.Initialize(id, Machine, priority);
+                state.Initialize(id, Machine);//, priority);
                 state.Extensions ??= GetExtensionsInState(state);
                 if (state.Extensions != null)
                 {
@@ -61,37 +78,7 @@ namespace MasterSM
             if (!States.TryAdd(state.Id, state))
                 return;
             
-            //Todo: binaary search for index insertion
-            
-            // Add state to order list
-            var index = 0;
-            for (var i = 0; i < StatesOrder.Count; i++)
-            {
-                if (state.Priority > States[StatesOrder[i]].Priority)
-                {
-                    index = i;
-                    break;
-                }
-                // todo: improve priority logic. 
-                // - If two states have the same priority?
-                //    - If a capability adds several states that need to have the states in ascending order?
-                //    - Add one state in front of the other easily
-                //    - Deals with the removal of states correctly
-                
-                // else if (state.Priority == States[StatesOrder[i]].Priority)
-                // {
-                //     throw new ArgumentException("Cannot add state with the same priority as an existing state.");
-                // }
-                
-                index = i + 1;
-            }
-            StatesOrder.Insert(index, state.Id);
-
-            if (index <= CurrentIndex)
-                CurrentIndex++;
-
-            if (index <= PreviousIndex)
-                PreviousIndex++;
+            PriorityManager.AddState(id, new StatePriority<TStateId>(0, priority));
             
 #if UNITY_EDITOR
             OnStateAdded?.Invoke();
@@ -115,19 +102,13 @@ namespace MasterSM
         {
             if (!States.TryGetValue(id, out var stateToRemove))
                 return;
-            
-            if (CurrentIndex >= StatesOrder.IndexOf(id))
-                CurrentIndex--;
-            
-            if (PreviousIndex >= StatesOrder.IndexOf(id))
-                PreviousIndex--;
 
             States.Remove(id);
-            StatesOrder.Remove(id);
+            PriorityManager.RemoveState(id);
             
             if (stateToRemove == CurrentState)
             {
-                if (TryGetTransition(out var newState, StatesOrder.Count))
+                if (TryGetTransition(out var newState, PriorityManager.StatesCount))
                 {
                     ChangeState(newState.id, newState.index);
                 }
@@ -221,13 +202,13 @@ namespace MasterSM
                 return;
             }
             
-            var index = StatesOrder.IndexOf(newState);
+            var index = PriorityManager.IndexFrom(newState);
             ChangeState(newState, index);
         }
         
         private void ChangeState(TStateId newState, int index)
         {
-            if (newState == null || index < 0 || index >= StatesOrder.Count)
+            if (newState == null || index < 0 || index >= PriorityManager.StatesCount)
             {
                 PreviousState = CurrentState;
                 PreviousIndex = CurrentIndex;
@@ -302,7 +283,7 @@ namespace MasterSM
             {
                 if (CanEnter(i))
                 {
-                    state = (StatesOrder[i], i);
+                    state = (PriorityManager.IdFrom(i), i);
                     return true;
                 }
             }
@@ -311,10 +292,11 @@ namespace MasterSM
 
             bool CanEnter(int i)
             {
-                if (!States[StatesOrder[i]].Enabled || !States[StatesOrder[i]].StateCanEnter()) 
+                var id = PriorityManager.IdFrom(i);
+                if (!States[id].Enabled || !States[id].StateCanEnter()) 
                     return false;
                 
-                foreach (var extension in States[StatesOrder[i]].EnabledExtensions())
+                foreach (var extension in States[id].EnabledExtensions())
                     if (!extension.CanEnter()) return false;
                     
                 return true;
@@ -334,7 +316,7 @@ namespace MasterSM
                 foreach (var extension in CurrentState.EnabledExtensions())
                     if (!extension.CanExit()) return;
                     
-                var maxIndex = CurrentState.StateCanEnter() ? CurrentIndex : StatesOrder.Count;
+                var maxIndex = CurrentState.StateCanEnter() ? CurrentIndex : PriorityManager.StatesCount;
                 if (TryGetTransition(out var state, maxIndex))
                     ChangeState(state.id, state.index);
             }

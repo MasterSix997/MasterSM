@@ -14,7 +14,6 @@ namespace MasterSM
     {
         public TStateId Id { get; set; }
         public TStateMachine Machine { get; set; }
-        public int Priority { get; set; }
         public bool IsActive { get; set; }
         private bool _initialized;
         bool IState<TStateId, TStateMachine>.Initialized => _initialized;
@@ -41,11 +40,10 @@ namespace MasterSM
             this.onFixedUpdate = onFixedUpdate;
         }
 
-        public void Initialize(TStateId id, TStateMachine machine, int priority)
+        public void Initialize(TStateId id, TStateMachine machine)
         {
             Id = id;
             Machine = machine;
-            Priority = priority;
             IsActive = false;
             Enabled = true;
             _initialized = true;

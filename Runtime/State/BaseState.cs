@@ -22,7 +22,7 @@ namespace MasterSM
         /// <summary>
         /// <inheritdoc cref="IState{TStateId, TStateMachine}.Priority"/>
         /// </summary>
-        public int Priority { get; private set; }
+        // public int Priority { get; private set; }
         /// <summary>
         /// <inheritdoc cref="IState{TStateId, TStateMachine}.IsActive"/>
         /// </summary>
@@ -49,11 +49,11 @@ namespace MasterSM
         /// <param name="id"></param>
         /// <param name="machine"></param>
         /// <param name="priority"></param>
-        public void Initialize(TStateId id, TStateMachine machine, int priority)
+        public void Initialize(TStateId id, TStateMachine machine)//, int priority)
         {
             Id = id;
             Machine = machine;
-            Priority = priority;
+            // Priority = priority;
             IsActive = false;
             Enabled = true;
             _initialized = true;

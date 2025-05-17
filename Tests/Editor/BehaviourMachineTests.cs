@@ -2,7 +2,7 @@
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Tests.Editor
+namespace MasterSM.Tests.Editor
 {
     public class BehaviourMachineTests
     {

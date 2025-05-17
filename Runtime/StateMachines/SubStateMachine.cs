@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using MasterSM.PriorityManagement;
 
 namespace MasterSM
 {
@@ -25,7 +26,7 @@ namespace MasterSM
         /// <summary>
         /// <inheritdoc cref="IState{TStateId,TParentMachine}.Priority"/>
         /// </summary>
-        public int Priority { get; private set; }
+        // public int Priority { get; private set; }
         /// <summary>
         /// <inheritdoc cref="IState{TStateId,TParentMachine}.IsActive"/>
         /// </summary>
@@ -50,7 +51,7 @@ namespace MasterSM
         private Dictionary<object, BaseMachine<TStateId, TStateMachine>> Layers { get; } = new();
         
         protected Dictionary<TStateId, IState<TStateId, TStateMachine>> States => _baseMachine.States;
-        protected List<TStateId> StatesOrder => _baseMachine.StatesOrder;
+        protected PriorityManager<TStateId> StatesOrder => _baseMachine.PriorityManager;
         protected int CurrentIndex => _baseMachine.CurrentIndex;
         
         public TStateId CurrentId => _baseMachine.CurrentId;
@@ -67,11 +68,11 @@ namespace MasterSM
         /// <param name="id"></param>
         /// <param name="machine"></param>
         /// <param name="priority"></param>
-        public void Initialize(TStateId id, TParentMachine machine, int priority)
+        public void Initialize(TStateId id, TParentMachine machine)//, int priority)
         {
             Id = id;
             Machine = machine;
-            Priority = priority;
+            // Priority = priority;
             IsActive = false;
             Initialized = true;
             Enabled = true;

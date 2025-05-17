@@ -21,7 +21,6 @@ namespace MasterSM
         protected Dictionary<object, BaseMachine<TStateId, TStateMachine>> Layers { get; } = new();
         
         protected Dictionary<TStateId, IState<TStateId, TStateMachine>> States => _baseMachine.States;
-        protected List<TStateId> StatesOrder => _baseMachine.StatesOrder;
         protected int CurrentIndex => _baseMachine.CurrentIndex;
 
         public TStateId CurrentId => _baseMachine.CurrentId;
