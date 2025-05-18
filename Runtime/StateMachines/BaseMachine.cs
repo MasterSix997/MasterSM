@@ -57,7 +57,7 @@ namespace MasterSM
         /// <param name="id">The state identifier.</param>
         /// <param name="state">The state to add.</param>
         /// <param name="priority">The priority of the state.</param>
-        public void AddState(TStateId id, IState<TStateId, TStateMachine> state, int priority = 0)
+        public void AddState(TStateId id, IState<TStateId, TStateMachine> state, int priority)
         {
             if (!state.Initialized)
             {

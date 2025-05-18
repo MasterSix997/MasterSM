@@ -1,7 +1,7 @@
 ﻿{
   "name": "com.mastersix.mastersm",
   "displayName": "Master State Machine",
-  "version": "0.0.1",
+  "version": "0.1.1",
   "unity": "2021.2",
   "description": "Master State Machine is an implementation of a paradigm based on (capabilities/states), which allows modular and scalable state machines, and a good interoperability with Unity components.",
   "keywords": [

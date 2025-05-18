@@ -94,7 +94,7 @@ namespace MasterSM.Tests.Editor
         [Test]
         public void Extension_ShouldBeInitialized_WhenStateIsAdded()
         {
-            _machine.AddState(State.State1, _stateWithExtension);
+            _machine.AddState(State.State1, _stateWithExtension, 0);
             
             Assert.IsNotNull(_stateWithExtension.Extensions);
             Assert.AreEqual(1, _stateWithExtension.Extensions.Count);
@@ -104,7 +104,7 @@ namespace MasterSM.Tests.Editor
         [Test]
         public void Extension_ShouldReceiveOnCreatedCall_WhenMachineIsCreated()
         {
-            _machine.AddState(State.State1, _stateWithExtension);
+            _machine.AddState(State.State1, _stateWithExtension, 0);
             _stateWithExtension.CanEnterResult = true;
             
             _machine.OnCreated();
@@ -115,7 +115,7 @@ namespace MasterSM.Tests.Editor
         [Test]
         public void Extension_ShouldPreventStateTransition_WhenCanEnterReturnsFalse()
         {
-            _machine.AddState(State.State1, _stateWithExtension);
+            _machine.AddState(State.State1, _stateWithExtension, 0);
             _machine.AddState(State.State2, _anotherStateWithExtension, 1);
             
             _anotherStateWithExtension.CanEnterResult = true;
@@ -129,8 +129,8 @@ namespace MasterSM.Tests.Editor
         [Test]
         public void Extension_ShouldPreventStateTransition_WhenCanExitReturnsFalse()
         {
-            _machine.AddState(State.State1, _stateWithExtension);
-            _machine.AddState(State.State2, _anotherStateWithExtension);
+            _machine.AddState(State.State1, _stateWithExtension, 1);
+            _machine.AddState(State.State2, _anotherStateWithExtension, 0);
             
             _stateWithExtension.CanEnterResult = true;
             _stateWithExtension.Extension.CanEnterResult = true;
@@ -152,7 +152,7 @@ namespace MasterSM.Tests.Editor
         [Test]
         public void Extension_ShouldReceiveLifecycleCalls_DuringStateTransitions()
         {
-            _machine.AddState(State.State1, _stateWithExtension);
+            _machine.AddState(State.State1, _stateWithExtension, 0);
             _machine.AddState(State.State2, _anotherStateWithExtension, 1);
             
             _stateWithExtension.CanEnterResult = true;
@@ -174,7 +174,7 @@ namespace MasterSM.Tests.Editor
         [Test]
         public void Extension_ShouldReceiveUpdateCalls_WhenStateIsActive()
         {
-            _machine.AddState(State.State1, _stateWithExtension);
+            _machine.AddState(State.State1, _stateWithExtension, 0);
             
             _stateWithExtension.CanEnterResult = true;
             
@@ -191,7 +191,7 @@ namespace MasterSM.Tests.Editor
         [Test]
         public void Extension_ShouldNotReceiveUpdateCalls_WhenDisabled()
         {
-            _machine.AddState(State.State1, _stateWithExtension);
+            _machine.AddState(State.State1, _stateWithExtension, 0);
             
             _stateWithExtension.CanEnterResult = true;
             _stateWithExtension.Extension.enabled = false;
@@ -210,7 +210,7 @@ namespace MasterSM.Tests.Editor
         public void MultipleExtensions_ShouldAllBeInitialized()
         {
             var stateWithMultipleExtensions = new StateWithMultipleExtensions();
-            _machine.AddState(State.State1, stateWithMultipleExtensions);
+            _machine.AddState(State.State1, stateWithMultipleExtensions, 0);
             
             Assert.IsNotNull(stateWithMultipleExtensions.Extensions);
             Assert.AreEqual(3, stateWithMultipleExtensions.Extensions.Count);

@@ -34,10 +34,10 @@ namespace MasterSM.Tests.Editor
             _priorityManager.AddState(StateId.State3, new StatePriority<StateId>(2));
             _priorityManager.AddState(StateId.State4, new StatePriority<StateId>(3));
             
-            Assert.AreEqual(_priorityManager.IdFrom(0), StateId.State1);
-            Assert.AreEqual(_priorityManager.IdFrom(1), StateId.State2);
-            Assert.AreEqual(_priorityManager.IdFrom(2), StateId.State3);
-            Assert.AreEqual(_priorityManager.IdFrom(3), StateId.State4);
+            Assert.AreEqual(_priorityManager.IdFrom(0), StateId.State4);
+            Assert.AreEqual(_priorityManager.IdFrom(1), StateId.State3);
+            Assert.AreEqual(_priorityManager.IdFrom(2), StateId.State2);
+            Assert.AreEqual(_priorityManager.IdFrom(3), StateId.State1);
         }
         
         [Test]
@@ -48,10 +48,10 @@ namespace MasterSM.Tests.Editor
             _priorityManager.AddState(StateId.State3, new StatePriority<StateId>(1, 1));
             _priorityManager.AddState(StateId.State4, new StatePriority<StateId>(1, 0));
             
-            Assert.AreEqual(_priorityManager.IdFrom(0), StateId.State1);
-            Assert.AreEqual(_priorityManager.IdFrom(1), StateId.State2);
-            Assert.AreEqual(_priorityManager.IdFrom(2), StateId.State4);
-            Assert.AreEqual(_priorityManager.IdFrom(3), StateId.State3);
+            Assert.AreEqual(_priorityManager.IdFrom(0), StateId.State3);
+            Assert.AreEqual(_priorityManager.IdFrom(1), StateId.State4);
+            Assert.AreEqual(_priorityManager.IdFrom(2), StateId.State2);
+            Assert.AreEqual(_priorityManager.IdFrom(3), StateId.State1);
         }
         
         [Test]
@@ -64,12 +64,12 @@ namespace MasterSM.Tests.Editor
             _priorityManager.AddState(StateId.State5, new StatePriority<StateId>(1, 1));
             _priorityManager.AddState(StateId.State6, new AfterStateResolver<StateId>(StateId.State4));
             
-            Assert.AreEqual(_priorityManager.IdFrom(0), StateId.State1);
-            Assert.AreEqual(_priorityManager.IdFrom(1), StateId.State2);
-            Assert.AreEqual(_priorityManager.IdFrom(2), StateId.State3);
-            Assert.AreEqual(_priorityManager.IdFrom(3), StateId.State4);
-            Assert.AreEqual(_priorityManager.IdFrom(4), StateId.State6);
-            Assert.AreEqual(_priorityManager.IdFrom(5), StateId.State5);
+            Assert.AreEqual(_priorityManager.IdFrom(0), StateId.State5);
+            Assert.AreEqual(_priorityManager.IdFrom(1), StateId.State4);
+            Assert.AreEqual(_priorityManager.IdFrom(2), StateId.State6);
+            Assert.AreEqual(_priorityManager.IdFrom(3), StateId.State3);
+            Assert.AreEqual(_priorityManager.IdFrom(4), StateId.State2);
+            Assert.AreEqual(_priorityManager.IdFrom(5), StateId.State1);
         }
 
         [Test]
@@ -80,10 +80,10 @@ namespace MasterSM.Tests.Editor
             _priorityManager.AddState(StateId.State3, new StatePriority<StateId>(-1));
             _priorityManager.AddState(StateId.State4, new StatePriority<StateId>(-2));
             
-            Assert.AreEqual(_priorityManager.IdFrom(0), StateId.State4);
-            Assert.AreEqual(_priorityManager.IdFrom(1), StateId.State3);
-            Assert.AreEqual(_priorityManager.IdFrom(2), StateId.State1);
-            Assert.AreEqual(_priorityManager.IdFrom(3), StateId.State2);
+            Assert.AreEqual(_priorityManager.IdFrom(0), StateId.State2);
+            Assert.AreEqual(_priorityManager.IdFrom(1), StateId.State1);
+            Assert.AreEqual(_priorityManager.IdFrom(2), StateId.State3);
+            Assert.AreEqual(_priorityManager.IdFrom(3), StateId.State4);
         }
         
         [Test]
@@ -94,10 +94,10 @@ namespace MasterSM.Tests.Editor
             _priorityManager.AddState(StateId.State3, new StatePriority<StateId>(-1, 0));
             _priorityManager.AddState(StateId.State4, new StatePriority<StateId>(-1, 1));
             
-            Assert.AreEqual(_priorityManager.IdFrom(0), StateId.State3);
+            Assert.AreEqual(_priorityManager.IdFrom(0), StateId.State2);
             Assert.AreEqual(_priorityManager.IdFrom(1), StateId.State1);
             Assert.AreEqual(_priorityManager.IdFrom(2), StateId.State4);
-            Assert.AreEqual(_priorityManager.IdFrom(3), StateId.State2);
+            Assert.AreEqual(_priorityManager.IdFrom(3), StateId.State3);
         }
     }
 }

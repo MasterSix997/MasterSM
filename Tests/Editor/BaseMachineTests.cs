@@ -48,9 +48,9 @@ namespace MasterSM.Tests.Editor
         [Test]
         public void AddState_ShouldAddStateToMachine()
         {
-            _machine.AddState(State.State1, _state1);
-            _machine.AddState(State.State2, _state2);
-            _machine.AddState(State.State3, _state3);
+            _machine.AddState(State.State1, _state1, 0);
+            _machine.AddState(State.State2, _state2, 1);
+            _machine.AddState(State.State3, _state3, 2);
             
             Assert.AreEqual(3, _machine.States.Count);
             Assert.AreEqual(_state1, _machine.States[State.State1]);
@@ -61,9 +61,9 @@ namespace MasterSM.Tests.Editor
         [Test]
         public void RemoveState_ShouldRemoveStateFromMachine()
         {
-            _machine.AddState(State.State1, _state1);
-            _machine.AddState(State.State2, _state2);
-            _machine.AddState(State.State3, _state3);
+            _machine.AddState(State.State1, _state1, 0);
+            _machine.AddState(State.State2, _state2, 1);
+            _machine.AddState(State.State3, _state3, 2);
             
             _machine.RemoveState(State.State2);
             
@@ -75,9 +75,9 @@ namespace MasterSM.Tests.Editor
         [Test]
         public void OnCreate_CurrentState_ShouldBeHighestPriorityWithCanEnterState()
         {
-            _machine.AddState(State.State1, _state1);
-            _machine.AddState(State.State2, _state2);
-            _machine.AddState(State.State3, _state3);
+            _machine.AddState(State.State1, _state1, 0);
+            _machine.AddState(State.State2, _state2, 1);
+            _machine.AddState(State.State3, _state3, 2);
             
             _state2.CanEnterToggle = true;
             
@@ -89,9 +89,9 @@ namespace MasterSM.Tests.Editor
         [Test]
         public void OnCreate_WhenNoStateCanEnter_CurrentState_ShouldBeNull()
         {
-            _machine.AddState(State.State1, _state1);
-            _machine.AddState(State.State2, _state2);
-            _machine.AddState(State.State3, _state3);
+            _machine.AddState(State.State1, _state1, 0);
+            _machine.AddState(State.State2, _state2, 1);
+            _machine.AddState(State.State3, _state3, 2);
             
             _machine.OnCreated();
             

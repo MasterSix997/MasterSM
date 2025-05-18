@@ -108,7 +108,7 @@ namespace MasterSM.Tests.Editor
         public void AddStateToLayer_ShouldAddStateToLayer()
         {
             var layer = _machine.AddLayer(State.State1);
-            layer.AddState(State.State1, _state1);
+            layer.AddState(State.State1, _state1, 0);
             
             Assert.IsTrue(layer.HasState(State.State1));
         }

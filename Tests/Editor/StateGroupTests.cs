@@ -64,9 +64,9 @@ namespace MasterSM.Tests.Editor
             Assert.AreEqual(3, _machine.States.Count);
             
             // State priorities should be basePriority, basePriority+1, basePriority+2
-            Assert.AreEqual(10, _machine.PriorityManager.PriorityFrom(State.State1));
-            Assert.AreEqual(11, _machine.PriorityManager.PriorityFrom(State.State2));
-            Assert.AreEqual(12, _machine.PriorityManager.PriorityFrom(State.State3));
+            Assert.AreEqual(10, _machine.PriorityManager.PriorityFrom(State.State1).Priority);
+            Assert.AreEqual(11, _machine.PriorityManager.PriorityFrom(State.State2).Priority);
+            Assert.AreEqual(12, _machine.PriorityManager.PriorityFrom(State.State3).Priority);
         }
         
         [Test]
@@ -105,10 +105,10 @@ namespace MasterSM.Tests.Editor
             _machine.AddState(group2);
             
             // Check priorities
-            Assert.AreEqual(10, _machine.PriorityManager.PriorityFrom(State.State1));
-            Assert.AreEqual(11, _machine.PriorityManager.PriorityFrom(State.State2));
-            Assert.AreEqual(20, _machine.PriorityManager.PriorityFrom(State.State3));
-            Assert.AreEqual(21, _machine.PriorityManager.PriorityFrom(State.State4));
+            Assert.AreEqual(10, _machine.PriorityManager.PriorityFrom(State.State1).Priority);
+            Assert.AreEqual(11, _machine.PriorityManager.PriorityFrom(State.State2).Priority);
+            Assert.AreEqual(20, _machine.PriorityManager.PriorityFrom(State.State3).Priority);
+            Assert.AreEqual(21, _machine.PriorityManager.PriorityFrom(State.State4).Priority);
             
             // Enable all states
             foreach (var state in _states.Values)
