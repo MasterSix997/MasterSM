@@ -232,23 +232,23 @@ namespace MasterSM.PriorityManagement
     public class GroupBoundaryResolver<TStateId> : IPriorityResolver<TStateId>
     {
         private readonly int _group;
-        private readonly bool _isFirst;  // true = first in the group, false = last in the group
+        private readonly bool _highPriority;  // true = first in the group, false = last in the group
         public int ResolverPriority => 150; // High priority, but below the global BoundaryResolver
-        public string Description => _isFirst 
+        public string Description => _highPriority 
             ? $"GroupBoundaryResolver(Group: {_group}, First)" 
             : $"GroupBoundaryResolver(Group: {_group}, Last)";
 
-        public GroupBoundaryResolver(int group, bool isFirst)
+        public GroupBoundaryResolver(int group, bool highPriority)
         {
             _group = group;
-            _isFirst = isFirst;
+            _highPriority = highPriority;
         }
 
         public ResolverResult CanInsertHere(PriorityManager<TStateId> context, int index, TStateId stateId)
         {
             bool isValidPosition = false;
             
-            if (_isFirst)
+            if (_highPriority)
             {
                 if (index == 0)
                 {
@@ -692,10 +692,10 @@ namespace MasterSM.PriorityManagement
         /// Creates a priority configuration that places the state at the beginning or end of a specific group
         /// </summary>
         /// <param name="group">The group identifier</param>
-        /// <param name="isFirst">True to place at the beginning of the group, false to place at the end</param>
-        public static StatePriority<TStateId> GroupBoundary(int group, bool isFirst)
+        /// <param name="highPriority">True to place at the beginning of the group, false to place at the end</param>
+        public static StatePriority<TStateId> GroupBoundary(int group, bool highPriority)
         {
-            return new StatePriority<TStateId>(new GroupBoundaryResolver<TStateId>(group, isFirst));
+            return new StatePriority<TStateId>(new GroupBoundaryResolver<TStateId>(group, highPriority));
         }
         
         /// <summary>
