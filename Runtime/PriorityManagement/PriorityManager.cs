@@ -17,29 +17,23 @@ namespace MasterSM.PriorityManagement
         public readonly List<TStateId> StatesOrder = new();
         public readonly List<StatePriority<TStateId>> Priorities = new();
         
-        // Dicionário para garantir acesso rápido via ID
         private readonly Dictionary<TStateId, int> _stateIndices = new();
 
         public readonly List<ChangeOrderEvent> OnChangeOrderEvent = new();
+        
         public int StatesCount => StatesOrder.Count;
         
         [HideInCallstack]
         public void AddState(in TStateId stateId, in StatePriority<TStateId> priority)
         {
-            // Remover primeiro se já existir (para garantir reordenação consistente)
             if (_stateIndices.ContainsKey(stateId))
-            {
-                RemoveState(stateId);
-            }
+                throw new Exception($"State with id '{stateId}' already exists");
             
             var index = ResolveOrder(stateId, priority);
             StatesOrder.Insert(index, stateId);
             Priorities.Insert(index, priority);
             
-            // Atualizar índices no dicionário
             UpdateIndicesAfterInsert(index);
-            
-            // Registrar no dicionário
             _stateIndices[stateId] = index;
         }
 
@@ -53,24 +47,18 @@ namespace MasterSM.PriorityManagement
         public void RemoveState(in TStateId stateId)
         {
             if (!_stateIndices.TryGetValue(stateId, out var index))
-            {
-                return; // Estado não encontrado
-            }
+                return;
             
             StatesOrder.RemoveAt(index);
             Priorities.RemoveAt(index);
             
-            // Remover do dicionário
             _stateIndices.Remove(stateId);
-            
-            // Atualizar índices no dicionário
             UpdateIndicesAfterRemove(index);
         }
 
         private int ResolveOrder(TStateId stateId, in StatePriority<TStateId> priority)
         {
-            // Para cada índice possível, verificar se o estado deve ser inserido aqui
-            for (int i = 0; i <= StatesCount; i++)
+            for (var i = 0; i <= StatesCount; i++)
             {
                 var result = priority.Resolver.CanInsertHere(this, i, stateId);
                 
@@ -82,16 +70,15 @@ namespace MasterSM.PriorityManagement
                 {
                     continue;
                 }
-                // Se for Unknown, continuar a verificação com próximos resolvedores
+                // If it is unknown, continue the verification with next resolvers
             }
 
-            // Se nenhum resolvedor tem uma opinião definitiva, inserir no final
+            // If no resolver has a definitive opinion, insert at the end
             return StatesCount;
         }
 
         private void UpdateIndicesAfterInsert(int insertedIndex)
         {
-            // Atualizar índices no dicionário para todos os estados após o inserido
             foreach (var key in _stateIndices.Keys.ToList())
             {
                 var currentIndex = _stateIndices[key];
@@ -100,14 +87,11 @@ namespace MasterSM.PriorityManagement
                     _stateIndices[key] = currentIndex + 1;
                 }
             }
-            
-            // Atualizar eventos externos
             IncreaseStateIndex(insertedIndex);
         }
         
         private void UpdateIndicesAfterRemove(int removedIndex)
         {
-            // Atualizar índices no dicionário para todos os estados após o removido
             foreach (var key in _stateIndices.Keys.ToList())
             {
                 var currentIndex = _stateIndices[key];
@@ -116,8 +100,6 @@ namespace MasterSM.PriorityManagement
                     _stateIndices[key] = currentIndex - 1;
                 }
             }
-            
-            // Atualizar eventos externos
             DecreaseStateIndex(removedIndex);
         }
 
@@ -161,45 +143,43 @@ namespace MasterSM.PriorityManagement
             {
                 return index;
             }
-            
-            return -1; // Não encontrado
+
+            throw new Exception($"No state with id '{stateId}' present");
         }
         
-        // Método para recalcular toda a ordem de estados (útil se os resolvedores mudarem de comportamento)
+        /// <summary>
+        /// Recalculate the entire order of states (useful if resolvers change their behavior)
+        /// </summary>
         public void RecalculateOrder()
         {
             var tempStates = new List<(TStateId id, StatePriority<TStateId> priority)>();
             
-            // Armazenar todos os estados e prioridades
-            for (int i = 0; i < StatesCount; i++)
+            for (var i = 0; i < StatesCount; i++)
             {
                 tempStates.Add((StatesOrder[i], Priorities[i]));
             }
             
-            // Limpar as listas
             StatesOrder.Clear();
             Priorities.Clear();
             _stateIndices.Clear();
             
-            // Readicionar todos os estados
             foreach (var (id, priority) in tempStates)
             {
                 AddState(id, priority);
             }
         }
         
-        // Método utilitário para depuração
         public string DebugOrder()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("Estados ordenados por prioridade:");
+            sb.AppendLine("Priority-sorted states:");
             
-            for (int i = 0; i < StatesCount; i++)
+            for (var i = 0; i < StatesCount; i++)
             {
                 var state = StatesOrder[i];
                 var priority = Priorities[i];
                 
-                sb.AppendLine($"{i}: {state} - Resolvedor: {priority.Resolver.Description}");
+                sb.AppendLine($"{i}: {state} - Resolver: {priority.Resolver.Description}");
             }
             
             return sb.ToString();
