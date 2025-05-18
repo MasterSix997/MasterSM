@@ -166,7 +166,7 @@ namespace MasterSM.Tests.Editor
             _priorityManager.AddState(StateId.State1, new StatePriority<StateId>(0, 0));
             _priorityManager.AddState(StateId.State2, new StatePriority<StateId>(1, 1));
             _priorityManager.AddState(StateId.State3, StatePriority<StateId>.Composite(
-                resolvers, 
+                resolvers,
                 CompositeResolver<StateId>.ResolverCombination.All
             ));
             
