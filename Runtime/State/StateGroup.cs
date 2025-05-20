@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using MasterSM.PriorityManagement;
 using UnityEngine;
+
+// todo: better STateGroup management, using StatePriority
 
 namespace MasterSM
 {
     [Serializable]
     public class StateGroup<TStateId, TStateMachine> where TStateMachine : IStateMachine
     {
+        public int group;
         public int basePriority;
         [SerializeReference] private List<IState<TStateId, TStateMachine>> states = new();
         [SerializeReference] private List<TStateId> stateIds = new();
@@ -59,14 +63,10 @@ namespace MasterSM
             states.Remove(state);
         }
 
-        public IEnumerable<(TStateId id, IState<TStateId, TStateMachine> state)> GetStatesByLowestPriority()
-        {
-            return GetStates();
-            // for (var i = states.Count - 1; i >= 0; i--)
-            // {
-            //     yield return (stateIds[i], states[i]);
-            // }
-        }
+        // public IEnumerable<(TStateId id, IState<TStateId, TStateMachine> state)> GetStatesByLowestPriority()
+        // {
+        //     return GetStates();
+        // }
 
         public IEnumerable<(TStateId id, IState<TStateId, TStateMachine> state)> GetStates()
         {

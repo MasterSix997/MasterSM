@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using MasterSM.Exceptions;
+using MasterSM.PriorityManagement;
 using UnityEngine;
 
 namespace MasterSM
@@ -70,24 +72,39 @@ namespace MasterSM
         }
         
         /// <summary>
-        /// <inheritdoc cref="BaseMachine{TStateId,TStateMachine}.AddState"/>
+        /// <inheritdoc cref="BaseMachine{TStateId,TStateMachine}.AddState(in TStateId,in MasterSM.IState{TStateId,TStateMachine},MasterSM.PriorityManagement.StatePriority{TStateId})"/>
         /// </summary>
-        /// <param name="id">The identifier of the state.</param>
-        /// <param name="state">The state instance.</param>
-        /// <param name="priority">The priority of the state.</param>
-        public void AddState(TStateId id, IState<TStateId, TStateMachine> state, int priority = 0)
+        /// <param name="id"></param>
+        /// <param name="state"></param>
+        /// <param name="statePriority"></param>
+        public void AddState(in TStateId id, in IState<TStateId, TStateMachine> state, StatePriority<TStateId> statePriority)
+        {
+            Initialize();
+            _baseMachine.AddState(id, state, statePriority);
+        }
+
+        public void AddState(in TStateId id, in IState<TStateId, TStateMachine> state, int priority = 0)
         {
             Initialize();
             _baseMachine.AddState(id, state, priority);
         }
-        
+
+        public void AddState(in TStateId id, in IState<TStateId, TStateMachine> state, int group, int priority)
+        {
+            Initialize();
+            _baseMachine.AddState(id, state, group, priority);
+        }
+
+        public void AddState(in IState<TStateId, TStateMachine> state, StatePriority<TStateId> priority)
+        {
+            Initialize();
+            _baseMachine.AddState(state, priority);
+        }
+
         public void AddState(StateGroup<TStateId, TStateMachine> group)
         {
-            var priority = group.basePriority;
-            foreach (var state in group.GetStatesByLowestPriority())
-            {
-                AddState(state.id, state.state, priority++);
-            }
+            Initialize();
+            _baseMachine.AddState(group);
         }
 
         /// <summary>
@@ -116,12 +133,12 @@ namespace MasterSM
         /// </summary>
         /// <param name="layerId">The identifier of the layer.</param>
         /// <returns>Returns the new layer instance.</returns>
-        /// <exception cref="ArgumentException">Thrown if a layer with the same identifier already exists.</exception>
+        /// <exception cref="MasterSMException">Thrown if a layer with the same identifier already exists.</exception>
         public BaseMachine<TStateId, TStateMachine> AddLayer(object layerId)
         {
             Initialize();
             if (Layers.ContainsKey(layerId))
-                throw new ArgumentException($"Layer with Id {layerId} already exists.");
+                throw ExceptionCreator.LayerIdAlreadyExists(layerId);
             
             var layer = new BaseMachine<TStateId, TStateMachine>
             {
@@ -139,11 +156,11 @@ namespace MasterSM
         /// Removes a layer from the state machine.
         /// </summary>
         /// <param name="layerId">The identifier of the layer to remove.</param>
-        /// <exception cref="ArgumentException">Thrown if the layer does not exist.</exception>
+        /// <exception cref="MasterSMException">Thrown if the layer does not exist.</exception>
         public void RemoveLayer(object layerId)
         {
-            if(!Layers.TryGetValue(layerId, out var layer))
-                throw new ArgumentException($"Layer with Id {layerId} does not exist.");
+            if (!Layers.TryGetValue(layerId, out var layer))
+                throw ExceptionCreator.LayerNotFound(layerId, "Removing layer");
 
             if (layer.CurrentState != null)
                 layer.ChangeState(default);
@@ -160,11 +177,11 @@ namespace MasterSM
         /// </summary>
         /// <param name="layerId">The identifier of the layer.</param>
         /// <returns>The layer instance.</returns>
-        /// <exception cref="ArgumentException">Thrown if the layer does not exist.</exception>
+        /// <exception cref="MasterSMException">Thrown if the layer does not exist.</exception>
         public BaseMachine<TStateId, TStateMachine> GetLayer(object layerId)
         {
             if (!Layers.TryGetValue(layerId, out var layer))
-                throw new ArgumentException($"Layer with Id {layerId} not found.");
+                throw ExceptionCreator.LayerNotFound(layerId, "Getting layer");
 
             return layer;
         }

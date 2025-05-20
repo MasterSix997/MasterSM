@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using JetBrains.Annotations;
+using MasterSM.Exceptions;
 using MasterSM.PriorityManagement;
 
 namespace MasterSM
@@ -50,18 +51,19 @@ namespace MasterSM
                 NewValue = newValue => PreviousIndex = newValue
             });
         }
-
+        
         /// <summary>
-        /// Adds a state to the state machine.
+        /// Adds a state to the state machine using a priority resolver.
         /// </summary>
         /// <param name="id">The state identifier.</param>
         /// <param name="state">The state to add.</param>
-        /// <param name="priority">The priority of the state.</param>
-        public void AddState(TStateId id, IState<TStateId, TStateMachine> state, int priority)
+        /// <param name="statePriority">The priority resolver of the state.</param>
+        /// <exception cref="MasterSMException">If already have a state with the same id</exception>
+        public void AddState(in TStateId id, in IState<TStateId, TStateMachine> state, StatePriority<TStateId> statePriority)
         {
             if (!state.Initialized)
             {
-                state.Initialize(id, Machine);//, priority);
+                state.Initialize(id, Machine);
                 state.Extensions ??= GetExtensionsInState(state);
                 if (state.Extensions != null)
                 {
@@ -74,21 +76,57 @@ namespace MasterSM
                     ExecuteOnCreated(state);
                 }
             }
-            
+
             if (!States.TryAdd(state.Id, state))
-                return;
+                throw ExceptionCreator.StateIdAlreadyExists(id, state);
             
-            PriorityManager.AddState(id, new StatePriority<TStateId>(0, priority));
+            PriorityManager.AddState(id, statePriority);
             
 #if UNITY_EDITOR
             OnStateAdded?.Invoke();
 #endif
         }
+
+        /// <summary>
+        /// Adds a state to the state machine, in group 0 with the specified priority.
+        /// </summary>
+        /// <param name="id">The state identifier.</param>
+        /// <param name="state">The state to add.</param>
+        /// <param name="priority">The priority of the state.</param>
+        public void AddState(in TStateId id, in IState<TStateId, TStateMachine> state, int priority)
+        {
+            AddState(id, state, new StatePriority<TStateId>(0, priority));
+        }
+
+        /// <summary>
+        /// Adds a state to the state machine, with the specified group and priority.
+        /// </summary>
+        /// <param name="id">The state identifier.</param>
+        /// <param name="state">The state to add.</param>
+        /// <param name="group">The group of the state</param>
+        /// <param name="priority">The priority of the state.</param>
+        public void AddState(in TStateId id, in IState<TStateId, TStateMachine> state, int group, int priority)
+        {
+            AddState(id, state, new StatePriority<TStateId>(group, priority));
+        }
+        
+        /// <summary>
+        /// Adds a state to the state machine omitting the id, If each state has a class as an identifier.
+        /// </summary>
+        /// <param name="state">The state to add.</param>
+        /// <param name="priority">The priority provider of the state.</param>
+        public void AddState(in IState<TStateId, TStateMachine> state, StatePriority<TStateId> priority)
+        {
+            if (typeof(TStateId) == typeof(Type))
+                AddState((TStateId)(object)state.GetType(), state, priority);
+            else if(typeof(TStateId) == typeof(string))
+                AddState((TStateId)(object)state.GetType().Name, state, priority);
+        }
         
         public void AddState(StateGroup<TStateId, TStateMachine> group)
         {
             var priority = group.basePriority;
-            foreach (var state in group.GetStatesByLowestPriority())
+            foreach (var state in group.GetStates())
             {
                 AddState(state.id, state.state, priority++);
             }
@@ -100,10 +138,9 @@ namespace MasterSM
         /// <param name="id">The state identifier.</param>
         public void RemoveState(TStateId id)
         {
-            if (!States.TryGetValue(id, out var stateToRemove))
+            if (!States.Remove(id, out var stateToRemove))
                 return;
 
-            States.Remove(id);
             PriorityManager.RemoveState(id);
             
             if (stateToRemove == CurrentState)
@@ -121,9 +158,7 @@ namespace MasterSM
             }
 
             if (stateToRemove == PreviousState)
-            {
                 PreviousState = null;
-            }
             
 #if UNITY_EDITOR
             OnStateRemoved?.Invoke();
@@ -135,11 +170,11 @@ namespace MasterSM
         /// </summary>
         /// <param name="id">The state identifier.</param>
         /// <returns>The state</returns>
-        /// <exception cref="ArgumentException">Throw exception if state with specified identifier is not found.</exception>
+        /// <exception cref="MasterSMException">Throw exception if state with specified identifier is not found.</exception>
         public IState<TStateId, TStateMachine> GetState(TStateId id)
         {
             if (!States.TryGetValue(id, out var state))
-                throw new ArgumentException($"State with id '{id}' not found.");
+                throw ExceptionCreator.IdNotFound(id, "Getting state");
             
             return state;
         }
@@ -149,10 +184,7 @@ namespace MasterSM
         /// </summary>
         /// <param name="stateId">The state identifier.</param>
         /// <returns></returns>
-        public bool HasState(TStateId stateId)
-        {
-            return States.ContainsKey(stateId);
-        }
+        public bool HasState(TStateId stateId) => States.ContainsKey(stateId);
         
         /// <summary>
         /// Exits the current state and sets the machine to its initial state.
@@ -201,9 +233,17 @@ namespace MasterSM
                 ChangeState(default, -1);
                 return;
             }
-            
-            var index = PriorityManager.IndexFrom(newState);
-            ChangeState(newState, index);
+
+            try
+            {
+                var index = PriorityManager.IndexFrom(newState);
+                ChangeState(newState, index);
+            }
+            catch (MasterSMException e)
+            {
+                e.Context = "Changing state manually";
+                throw;
+            }
         }
         
         private void ChangeState(TStateId newState, int index)

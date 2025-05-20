@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using MasterSM.Exceptions;
 using UnityEngine;
 
 namespace MasterSM.PriorityManagement
@@ -14,28 +15,28 @@ namespace MasterSM.PriorityManagement
         /// <summary>
         /// Gets the priority value within the group
         /// </summary>
-        /// <exception cref="Exception">Thrown when the resolver doesn't implement IPriorityGroupProvider</exception>
+        /// <exception cref="MasterSMException">Thrown when the resolver doesn't implement IPriorityGroupProvider</exception>
         public int Priority
         {
             get
             {
                 if (Resolver is IPriorityGroupProvider priorityResolver)
                     return priorityResolver.Priority;
-                throw new Exception("Priority provider does not have 'priority' field");
+                throw ExceptionCreator.PriorityResolverNotImplementProvider(nameof(IPriorityGroupProvider), typeof(TStateId).Name);
             }
         }
         
         /// <summary>
         /// Gets the group identifier
         /// </summary>
-        /// <exception cref="Exception">Thrown when the resolver doesn't implement IPriorityGroupProvider</exception>
+        /// <exception cref="MasterSMException">Thrown when the resolver doesn't implement IPriorityGroupProvider</exception>
         public int Group
         {
             get
             {
                 if (Resolver is IPriorityGroupProvider priorityResolver)
                     return priorityResolver.Group;
-                throw new Exception("Priority provider does not have 'group' field");
+                throw ExceptionCreator.PriorityResolverNotImplementProvider(nameof(IPriorityGroupProvider), typeof(TStateId).Name);
             }
         }
 

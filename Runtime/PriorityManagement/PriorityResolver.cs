@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using MasterSM.Exceptions;
 using UnityEngine;
 
 namespace MasterSM.PriorityManagement
@@ -88,7 +89,7 @@ namespace MasterSM.PriorityManagement
         [HideInCallstack]
         private int DefaultTiebreaker(TStateId a, TStateId b)
         {
-            throw new Exception($"State '{a.ToString()}' has the same priority as '{b.ToString()}'");
+            throw ExceptionCreator.SamePriority(a, b, _priority);
         }
 
         /// <summary>
@@ -101,31 +102,23 @@ namespace MasterSM.PriorityManagement
         public ResolverResult CanInsertHere(PriorityManager<TStateId> context, int index, TStateId stateId)
         {
             if (index >= context.StatesCount)
-            {
                 return ResolverResult.Insert;
-            }
             
             var currentPriority = context.PriorityFrom(index);
             
             // Fast path: if not DefaultPriorityResolver, delegate immediately
             if (currentPriority.Resolver is not DefaultPriorityResolver<TStateId> currentResolver)
-            {
                 return ResolverResult.Unknown;
-            }
             
             // Compare groups first - most significant difference
-            int groupComparison = _group.CompareTo(currentResolver._group);
+            var groupComparison = _group.CompareTo(currentResolver._group);
             if (groupComparison != 0)
-            {
                 return groupComparison > 0 ? ResolverResult.Insert : ResolverResult.Skip;
-            }
             
             // Same group, compare priorities
-            int priorityComparison = _priority.CompareTo(currentResolver._priority);
+            var priorityComparison = _priority.CompareTo(currentResolver._priority);
             if (priorityComparison != 0)
-            {
                 return priorityComparison > 0 ? ResolverResult.Insert : ResolverResult.Skip;
-            }
             
             // Only use tiebreaker if absolutely necessary
             return _tiebreaker(stateId, context.IdFrom(index)) > 0 
@@ -140,7 +133,7 @@ namespace MasterSM.PriorityManagement
     public class AfterStateResolver<TStateId> : IPriorityResolver<TStateId>
     {
         private readonly TStateId _after;
-        private Dictionary<TStateId, int> _statePositionCache;
+        private readonly Dictionary<TStateId, int> _statePositionCache;
         private int _lastContextSize;
         
         public int ResolverPriority => 100;
@@ -162,14 +155,12 @@ namespace MasterSM.PriorityManagement
 
             // Check if we're trying to insert after ourselves
             if (stateId.Equals(_after))
-            {
                 return ResolverResult.Skip;
-            }
 
             // Use cached position if available
-            if (!_statePositionCache.TryGetValue(_after, out int targetPosition))
+            if (!_statePositionCache.TryGetValue(_after, out var targetPosition))
             {
-                for (int i = 0; i < context.StatesCount; i++)
+                for (var i = 0; i < context.StatesCount; i++)
                 {
                     var currentId = context.IdFrom(i);
                     if (currentId.Equals(_after))
@@ -191,7 +182,7 @@ namespace MasterSM.PriorityManagement
     public class BeforeStateResolver<TStateId> : IPriorityResolver<TStateId>
     {
         private readonly TStateId _before;
-        private Dictionary<TStateId, int> _statePositionCache;
+        private readonly Dictionary<TStateId, int> _statePositionCache;
         private int _lastContextSize;
         
         public int ResolverPriority => 100;
@@ -213,14 +204,12 @@ namespace MasterSM.PriorityManagement
 
             // Check if we're trying to insert before ourselves
             if (stateId.Equals(_before))
-            {
                 return ResolverResult.Skip;
-            }
 
             // Use cached position if available
-            if (!_statePositionCache.TryGetValue(_before, out int targetPosition))
+            if (!_statePositionCache.TryGetValue(_before, out var targetPosition))
             {
-                for (int i = 0; i < context.StatesCount; i++)
+                for (var i = 0; i < context.StatesCount; i++)
                 {
                     var currentId = context.IdFrom(i);
                     if (currentId.Equals(_before))
@@ -253,13 +242,9 @@ namespace MasterSM.PriorityManagement
         public ResolverResult CanInsertHere(PriorityManager<TStateId> context, int index, TStateId stateId)
         {
             if (_isFirst)
-            {
                 return index == 0 ? ResolverResult.Insert : ResolverResult.Skip;
-            }
             else
-            {
                 return index == context.StatesCount ? ResolverResult.Insert : ResolverResult.Skip;
-            }
         }
     }
     
@@ -270,7 +255,7 @@ namespace MasterSM.PriorityManagement
     {
         private readonly int _group;
         private readonly bool _highPriority;
-        private Dictionary<int, bool> _groupCache = new Dictionary<int, bool>();
+        private readonly Dictionary<int, bool> _groupCache = new();
         
         public int ResolverPriority => 150;
         public string Description => _highPriority 
@@ -287,9 +272,7 @@ namespace MasterSM.PriorityManagement
         {
             // Reset cache if context changed
             if (_groupCache.Count > 100)
-            {
                 _groupCache.Clear();
-            }
             
             if (_highPriority)
             {
@@ -302,8 +285,8 @@ namespace MasterSM.PriorityManagement
                 }
                 
                 // Check if this is the start of the group
-                bool prevInGroup = index > 0 && CheckIsInGroup(context, index - 1);
-                bool currentInGroup = index < context.StatesCount && CheckIsInGroup(context, index);
+                var prevInGroup = index > 0 && CheckIsInGroup(context, index - 1);
+                var currentInGroup = index < context.StatesCount && CheckIsInGroup(context, index);
                 
                 return (!prevInGroup && currentInGroup) ? ResolverResult.Insert : ResolverResult.Skip;
             }
@@ -317,8 +300,8 @@ namespace MasterSM.PriorityManagement
                         : ResolverResult.Skip;
                 }
                 
-                bool prevInGroup = index > 0 && CheckIsInGroup(context, index - 1);
-                bool currentInGroup = CheckIsInGroup(context, index);
+                var prevInGroup = index > 0 && CheckIsInGroup(context, index - 1);
+                var currentInGroup = CheckIsInGroup(context, index);
                 
                 return (prevInGroup && !currentInGroup) ? ResolverResult.Insert : ResolverResult.Skip;
             }
@@ -326,12 +309,10 @@ namespace MasterSM.PriorityManagement
         
         private bool CheckIsInGroup(PriorityManager<TStateId> context, int index)
         {
-            if (_groupCache.TryGetValue(index, out bool cached))
-            {
+            if (_groupCache.TryGetValue(index, out var cached))
                 return cached;
-            }
             
-            bool result = IsStateInGroup(context, index, _group);
+            var result = IsStateInGroup(context, index, _group);
             _groupCache[index] = result;
             return result;
         }
@@ -381,11 +362,9 @@ namespace MasterSM.PriorityManagement
             ResolverPriority = resolverPriority;
             
             // Pre-sort resolvers by priority
-            if (_combination == ResolverCombination.First)
-            {
-                _resolvers.Sort((a, b) => b.ResolverPriority.CompareTo(a.ResolverPriority));
-                _isResolved = true;
-            }
+            if (_combination != ResolverCombination.First) return;
+            _resolvers.Sort((a, b) => b.ResolverPriority.CompareTo(a.ResolverPriority));
+            _isResolved = true;
         }
 
         public ResolverResult CanInsertHere(PriorityManager<TStateId> context, int index, TStateId stateId)
@@ -395,20 +374,15 @@ namespace MasterSM.PriorityManagement
                 _resolvers.Sort((a, b) => b.ResolverPriority.CompareTo(a.ResolverPriority));
                 _isResolved = true;
             }
-            
-            switch (_combination)
+
+            return _combination switch
             {
-                case ResolverCombination.First:
-                    return ResolveFirst(context, index, stateId);
-                case ResolverCombination.All:
-                    return ResolveAll(context, index, stateId);
-                case ResolverCombination.Any:
-                    return ResolveAny(context, index, stateId);
-                case ResolverCombination.Majority:
-                    return ResolveMajority(context, index, stateId);
-                default:
-                    return ResolverResult.Unknown;
-            }
+                ResolverCombination.First => ResolveFirst(context, index, stateId),
+                ResolverCombination.All => ResolveAll(context, index, stateId),
+                ResolverCombination.Any => ResolveAny(context, index, stateId),
+                ResolverCombination.Majority => ResolveMajority(context, index, stateId),
+                _ => ResolverResult.Unknown
+            };
         }
 
         private ResolverResult ResolveFirst(PriorityManager<TStateId> context, int index, TStateId stateId)
@@ -417,25 +391,21 @@ namespace MasterSM.PriorityManagement
             {
                 var result = resolver.CanInsertHere(context, index, stateId);
                 if (result != ResolverResult.Unknown)
-                {
                     return result;
-                }
             }
             return ResolverResult.Unknown;
         }
 
         private ResolverResult ResolveAll(PriorityManager<TStateId> context, int index, TStateId stateId)
         {
-            bool hasUnknown = false;
+            var hasUnknown = false;
             
             foreach (var resolver in _resolvers)
             {
                 var result = resolver.CanInsertHere(context, index, stateId);
                 
                 if (result == ResolverResult.Skip)
-                {
                     return ResolverResult.Skip;
-                }
                 
                 hasUnknown |= result == ResolverResult.Unknown;
             }
@@ -445,17 +415,15 @@ namespace MasterSM.PriorityManagement
 
         private ResolverResult ResolveAny(PriorityManager<TStateId> context, int index, TStateId stateId)
         {
-            bool hasInsert = false;
-            bool allUnknown = true;
+            var hasInsert = false;
+            var allUnknown = true;
             
             foreach (var resolver in _resolvers)
             {
                 var result = resolver.CanInsertHere(context, index, stateId);
                 
                 if (result == ResolverResult.Insert)
-                {
                     return ResolverResult.Insert; // Early return on first insert
-                }
                 
                 allUnknown &= result == ResolverResult.Unknown;
             }
@@ -465,9 +433,9 @@ namespace MasterSM.PriorityManagement
 
         private ResolverResult ResolveMajority(PriorityManager<TStateId> context, int index, TStateId stateId)
         {
-            int insertCount = 0;
-            int skipCount = 0;
-            int unknownCount = 0;
+            var insertCount = 0;
+            var skipCount = 0;
+            var unknownCount = 0;
             
             foreach (var resolver in _resolvers)
             {
@@ -475,16 +443,13 @@ namespace MasterSM.PriorityManagement
                 {
                     case ResolverResult.Insert:
                         if (++insertCount > _resolvers.Count / 2)
-                        {
                             return ResolverResult.Insert;
-                        }
                         break;
                     case ResolverResult.Skip:
                         if (++skipCount > _resolvers.Count / 2)
-                        {
                             return ResolverResult.Skip;
-                        }
                         break;
+                    case ResolverResult.Unknown:
                     default:
                         unknownCount++;
                         break;
@@ -492,9 +457,7 @@ namespace MasterSM.PriorityManagement
             }
             
             if (unknownCount == _resolvers.Count)
-            {
                 return ResolverResult.Unknown;
-            }
             
             return insertCount > skipCount ? ResolverResult.Insert : ResolverResult.Skip;
         }
@@ -544,9 +507,7 @@ namespace MasterSM.PriorityManagement
         public ResolverResult CanInsertHere(PriorityManager<TStateId> context, int index, TStateId stateId)
         {
             if (_condition(context, stateId))
-            {
                 return _resolver.CanInsertHere(context, index, stateId);
-            }
             
             return ResolverResult.Unknown;
         }
@@ -580,24 +541,20 @@ namespace MasterSM.PriorityManagement
                 _lastGroupStartIndex = null;
                 _lastContextSize = context.StatesCount;
                 if (_groupCache.Count > 100)
-                {
                     _groupCache.Clear();
-                }
             }
 
-            int groupStartIndex = _lastGroupStartIndex ?? FindGroupStartIndex(context);
+            var groupStartIndex = _lastGroupStartIndex ?? FindGroupStartIndex(context);
             if (groupStartIndex == -1)
-            {
                 return ResolverResult.Unknown;
-            }
             
-            int targetPosition = groupStartIndex + _offsetFromStart;
+            var targetPosition = groupStartIndex + _offsetFromStart;
             return index == targetPosition ? ResolverResult.Insert : ResolverResult.Skip;
         }
         
         private int FindGroupStartIndex(PriorityManager<TStateId> context)
         {
-            for (int i = 0; i < context.StatesCount; i++)
+            for (var i = 0; i < context.StatesCount; i++)
             {
                 if (CheckIsInGroup(context, i))
                 {
@@ -613,13 +570,11 @@ namespace MasterSM.PriorityManagement
         
         private bool CheckIsInGroup(PriorityManager<TStateId> context, int index)
         {
-            if (_groupCache.TryGetValue(index, out bool cached))
-            {
+            if (_groupCache.TryGetValue(index, out var cached))
                 return cached;
-            }
             
             var priority = context.PriorityFrom(index);
-            bool result = priority.Resolver is DefaultPriorityResolver<TStateId> defaultResolver && 
+            var result = priority.Resolver is DefaultPriorityResolver<TStateId> defaultResolver && 
                          defaultResolver.Group == _group;
             
             _groupCache[index] = result;

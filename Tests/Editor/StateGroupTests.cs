@@ -130,7 +130,7 @@ namespace MasterSM.Tests.Editor
             _stateGroup.AddState(State.State2, _states[State.State2]);
             
             // Get ordered states
-            var orderedStates = _stateGroup.GetStatesByLowestPriority().ToArray();
+            var orderedStates = _stateGroup.GetStates().ToArray();
             
             // Check order (should be the order they were added)
             Assert.AreEqual(State.State3, orderedStates[0].id);

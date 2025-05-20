@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using MasterSM.PriorityManagement;
+
 namespace MasterSM
 {
     public interface IStateMachine
@@ -9,7 +13,11 @@ namespace MasterSM
         where TStateMachine : IStateMachine
     {
         public TStateId CurrentId { get; }
-        public void AddState(TStateId id, IState<TStateId, TStateMachine> state, int priority = 0);
+        public void AddState(in TStateId id, in IState<TStateId, TStateMachine> state, StatePriority<TStateId> statePriority);
+        public void AddState(in TStateId id, in IState<TStateId, TStateMachine> state, int priority = 0);
+        public void AddState(in TStateId id, in IState<TStateId, TStateMachine> state, int group, int priority);
+        public void AddState(in IState<TStateId, TStateMachine> state, StatePriority<TStateId> priority);
+        public void AddState(StateGroup<TStateId, TStateMachine> group);
         public void RemoveState(TStateId id);
         public void ChangeState(TStateId newState);
         public IState<TStateId, TStateMachine> GetState(TStateId id);

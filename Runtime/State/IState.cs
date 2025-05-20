@@ -8,7 +8,7 @@ namespace MasterSM
         where TStateMachine : IStateMachine
     {
         /// <summary>
-        /// The identifier of this state machine.
+        /// The identifier of this state.
         /// </summary>
         public TStateId Id { get; }
         /// <summary>
@@ -16,23 +16,19 @@ namespace MasterSM
         /// </summary>
         public TStateMachine Machine { get; }
         /// <summary>
-        /// The priority of this state machine.
-        /// </summary>
-        // public int Priority { get; }
-        /// <summary>
-        /// Whether this state machine is currently active.
+        /// Whether this state is currently active.
         /// </summary>
         public bool IsActive { get; set; }
         /// <summary>
-        /// Whether this state machine has been initialized.
+        /// Whether this state has been initialized.
         /// </summary>
         public bool Initialized { get; }
         /// <summary>
-        /// Whether this state machine is enabled.
+        /// Whether this state is enabled.
         /// </summary>
         public bool Enabled { get; set; }
         /// <summary>
-        /// A list of extensions for this state machine.
+        /// A list of extensions for this state.
         /// The extensions are used to add functionality to the state.
         /// </summary>
         [CanBeNull] public List<StateExtension<TStateId, TStateMachine>> Extensions { get; set; }
@@ -54,7 +50,7 @@ namespace MasterSM
         }
 
         /// <summary>
-        /// Initializes the state machine.
+        /// Initializes the state.
         /// This method is called by the state machine when it is added to the state machine list.
         /// </summary>
         /// <param name="id"></param>

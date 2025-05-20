@@ -1,5 +1,6 @@
 ﻿using System;
 using MasterSM;
+using MasterSM.Exceptions;
 using NUnit.Framework;
 
 namespace MasterSM.Tests.Editor
@@ -301,7 +302,7 @@ namespace MasterSM.Tests.Editor
         }
 
         [Test]
-        public void ChangeState_ToUnlottedState_CurrentState_ShouldBeNull()
+        public void ChangeState_ToUnlottedState_ShouldThrowException()
         {
             _machine.AddState(State.State1, _state1, 0);
             _machine.AddState(State.State2, _state2, 1);
@@ -309,12 +310,7 @@ namespace MasterSM.Tests.Editor
             _state1.CanEnterToggle = true;
             
             _machine.OnCreated();
-            _machine.ChangeState(State.State3);
-            
-            Assert.IsNull(_machine.CurrentState);
-            Assert.AreEqual(_state1, _machine.PreviousState);
-            Assert.IsTrue(_state1.Exited);
-            Assert.IsFalse(_state3.Entered);
+            Assert.Throws<MasterSMException>(() => _machine.ChangeState(State.State3));
         }
         #endregion
 
@@ -342,7 +338,7 @@ namespace MasterSM.Tests.Editor
         [Test]
         public void GetInvalidState_ShouldThrowException()
         {
-            Assert.Throws<ArgumentException>(() => _machine.GetState(State.State1));
+            Assert.Throws<MasterSMException>(() => _machine.GetState(State.State1));
         }
         #endregion
     }

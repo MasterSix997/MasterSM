@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using MasterSM.Exceptions;
 using UnityEngine;
 
 namespace MasterSM.PriorityManagement
@@ -27,7 +28,7 @@ namespace MasterSM.PriorityManagement
         public void AddState(in TStateId stateId, in StatePriority<TStateId> priority)
         {
             if (_stateIndices.ContainsKey(stateId))
-                throw new Exception($"State with id '{stateId}' already exists");
+                throw ExceptionCreator.PriorityManagerIdAlreadyExists(stateId);
             
             var index = ResolveOrder(stateId, priority);
             StatesOrder.Insert(index, stateId);
@@ -63,14 +64,8 @@ namespace MasterSM.PriorityManagement
                 var result = priority.Resolver.CanInsertHere(this, i, stateId);
                 
                 if (result == ResolverResult.Insert)
-                {
                     return i;
-                }
-                else if (result == ResolverResult.Skip)
-                {
-                    continue;
-                }
-                // If it is unknown, continue the verification with next resolvers
+                // If it is "unknown" or "skip", continue the verification with next resolvers
             }
 
             // If no resolver has a definitive opinion, insert at the end
@@ -83,9 +78,7 @@ namespace MasterSM.PriorityManagement
             {
                 var currentIndex = _stateIndices[key];
                 if (currentIndex >= insertedIndex)
-                {
                     _stateIndices[key] = currentIndex + 1;
-                }
             }
             IncreaseStateIndex(insertedIndex);
         }
@@ -96,9 +89,7 @@ namespace MasterSM.PriorityManagement
             {
                 var currentIndex = _stateIndices[key];
                 if (currentIndex > removedIndex)
-                {
                     _stateIndices[key] = currentIndex - 1;
-                }
             }
             DecreaseStateIndex(removedIndex);
         }
@@ -123,28 +114,29 @@ namespace MasterSM.PriorityManagement
             }
         }
 
-        public TStateId IdFrom(int idIndex) => StatesOrder[idIndex];
+        public TStateId IdFrom(int idIndex) => CheckIndex(idIndex) ? StatesOrder[idIndex] : default;
         
-        public StatePriority<TStateId> PriorityFrom(int idIndex) => Priorities[idIndex];
+        public StatePriority<TStateId> PriorityFrom(int idIndex) => CheckIndex(idIndex) ? Priorities[idIndex] : null;
         
         public StatePriority<TStateId> PriorityFrom(in TStateId stateId)
         {
-            if (_stateIndices.TryGetValue(stateId, out var index))
-            {
-                return Priorities[index];
-            }
-            
-            throw new KeyNotFoundException($"Estado {stateId} não encontrado no gerenciador de prioridades.");
+            return Priorities[IndexFrom(stateId)];
         }
         
         public int IndexFrom(in TStateId stateId)
         {
-            if (_stateIndices.TryGetValue(stateId, out var index))
-            {
-                return index;
-            }
+            if (!_stateIndices.TryGetValue(stateId, out var index))
+                throw ExceptionCreator.IdNotFound(stateId);
 
-            throw new Exception($"No state with id '{stateId}' present");
+            return index;
+        }
+
+        private bool CheckIndex(int idIndex)
+        {
+            if (idIndex < 0 || idIndex >= StatesCount)
+                throw ExceptionCreator.IdIndexOutOfRange(idIndex);
+            
+            return true;
         }
         
         /// <summary>
