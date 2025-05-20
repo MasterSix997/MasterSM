@@ -61,14 +61,13 @@ namespace MasterSM
         /// </summary>
         /// <typeparam name="T">The type of the capability.</typeparam>
         /// <returns>The capability instance.</returns>
+        /// <exception cref="MasterSMException"></exception>
         public T GetCapability<T>() where T : BaseCapability<TStateId, TStateMachine>
         {
-            if (Capabilities.TryGetValue(typeof(T), out var capability))
-            {
-                return (T)capability;
-            }
+            if (!Capabilities.TryGetValue(typeof(T), out var capability))
+                throw ExceptionCreator.CapabilityNotFound(typeof(T), "Getting capability");
 
-            return null;
+            return (T)capability;
         }
         
         /// <summary>

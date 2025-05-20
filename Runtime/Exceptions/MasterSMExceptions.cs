@@ -117,5 +117,15 @@ namespace MasterSM.Exceptions
                 "Make sure you do not remove the layer at some point"
             );
         }
+
+        public static MasterSMException CapabilityNotFound(Type capabilityType, string context)
+        {
+            return new MasterSMException(
+                $"Capability of type '{capabilityType}' not found",
+                context,
+                "In order to get a capacity, it is necessary to register it before",
+                "Ensure that this capacity was recorded before using"
+            );
+        }
     }
 }
